@@ -1,4 +1,3 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import async_session_factory
 from app.models.base import Base
 from app.models.alert import Alert  # noqa: F401
@@ -25,7 +24,6 @@ async def seed_mock_data() -> None:
             logger.info("Data already exists, skip seeding")
             return
 
-        import json
         from datetime import datetime, timezone
 
         alerts_data = [
@@ -42,8 +40,8 @@ async def seed_mock_data() -> None:
                 "item_key": "system.cpu.util",
                 "item_value": "95.2",
                 "message": "CPU utilization is 95.2%",
-                "tags": json.dumps({"scope": "production", "team": "infra"}),
-                "raw_payload": json.dumps({"event_id": "evt-001"}),
+                "tags": {"scope": "production", "team": "infra"},
+                "raw_payload": {"event_id": "evt-001"},
                 "is_recovery": False,
                 "dedup_key": "zabbix:trg-001:host-001",
                 "dedup_count": 1,
@@ -64,8 +62,8 @@ async def seed_mock_data() -> None:
                 "item_key": "vfs.fs.size[/,pfree]",
                 "item_value": "5.1",
                 "message": "Free disk space is 5.1%",
-                "tags": json.dumps({"scope": "production", "team": "dba"}),
-                "raw_payload": json.dumps({"event_id": "evt-002"}),
+                "tags": {"scope": "production", "team": "dba"},
+                "raw_payload": {"event_id": "evt-002"},
                 "is_recovery": False,
                 "dedup_key": "zabbix:trg-002:host-002",
                 "dedup_count": 1,
@@ -86,8 +84,8 @@ async def seed_mock_data() -> None:
                 "item_key": "net.if.status[eth0]",
                 "item_value": "0",
                 "message": "Network interface eth0 is down",
-                "tags": json.dumps({"scope": "production", "team": "network"}),
-                "raw_payload": json.dumps({"event_id": "evt-003"}),
+                "tags": {"scope": "production", "team": "network"},
+                "raw_payload": {"event_id": "evt-003"},
                 "is_recovery": False,
                 "dedup_key": "zabbix:trg-003:host-003",
                 "dedup_count": 1,
@@ -109,42 +107,42 @@ async def seed_mock_data() -> None:
             {
                 "alert_id": 1,
                 "summary": "CPU 使用率持续超过 90%，可能存在进程异常或资源不足",
-                "possible_causes": json.dumps(["业务流量突增", "存在 CPU 密集型进程", "应用程序内存泄漏导致频繁 GC"]),
-                "suggested_actions": json.dumps(["检查 top/htop 中 CPU 占用最高的进程", "查看近期流量变化趋势", "考虑水平扩容或优化代码性能"]),
+                "possible_causes": ["业务流量突增", "存在 CPU 密集型进程", "应用程序内存泄漏导致频繁 GC"],
+                "suggested_actions": ["检查 top/htop 中 CPU 占用最高的进程", "查看近期流量变化趋势", "考虑水平扩容或优化代码性能"],
                 "risk_level": "high",
                 "confidence": 0.85,
                 "need_human_confirm": False,
                 "model_used": "mock",
                 "prompt": "mock prompt",
-                "raw_response": "mock response",
+                "raw_response": {"summary": "mock response"},
                 "latency_ms": 10,
                 "created_at": datetime.now(timezone.utc),
             },
             {
                 "alert_id": 2,
                 "summary": "磁盘剩余空间不足 10%，需要及时清理或扩容",
-                "possible_causes": json.dumps(["日志文件过大", "临时文件未清理", "数据增长超出预期"]),
-                "suggested_actions": json.dumps(["查找大文件并清理", "配置日志轮转策略", "评估扩容磁盘容量"]),
+                "possible_causes": ["日志文件过大", "临时文件未清理", "数据增长超出预期"],
+                "suggested_actions": ["查找大文件并清理", "配置日志轮转策略", "评估扩容磁盘容量"],
                 "risk_level": "medium",
                 "confidence": 0.80,
                 "need_human_confirm": False,
                 "model_used": "mock",
                 "prompt": "mock prompt",
-                "raw_response": "mock response",
+                "raw_response": {"summary": "mock response"},
                 "latency_ms": 8,
                 "created_at": datetime.now(timezone.utc),
             },
             {
                 "alert_id": 3,
                 "summary": "核心路由器接口宕机，影响范围较大，需紧急处理",
-                "possible_causes": json.dumps(["物理链路故障", "交换机端口故障", "配置变更导致接口 down"]),
-                "suggested_actions": json.dumps(["检查物理连接和指示灯状态", "登录设备查看接口日志", "联系网络团队进行应急处理"]),
+                "possible_causes": ["物理链路故障", "交换机端口故障", "配置变更导致接口 down"],
+                "suggested_actions": ["检查物理连接和指示灯状态", "登录设备查看接口日志", "联系网络团队进行应急处理"],
                 "risk_level": "critical",
                 "confidence": 0.90,
                 "need_human_confirm": True,
                 "model_used": "mock",
                 "prompt": "mock prompt",
-                "raw_response": "mock response",
+                "raw_response": {"summary": "mock response"},
                 "latency_ms": 12,
                 "created_at": datetime.now(timezone.utc),
             },

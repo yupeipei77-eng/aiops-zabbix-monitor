@@ -6,10 +6,10 @@ logger = get_logger(__name__)
 
 
 class StormDetector:
-    def __init__(self):
-        self._redis: aioredis.Redis | None = None
+    def __init__(self, redis_client: aioredis.Redis | None = None):
+        self._redis: aioredis.Redis | None = redis_client
 
-    async def _get_redis(self) -> aioredis.Redis:
+    async def _get_redis(self):
         if self._redis is None:
             self._redis = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
         return self._redis
@@ -31,5 +31,5 @@ class StormDetector:
         return int(val) if val else 0
 
     async def close(self) -> None:
-        if self._redis:
+        if self._redis and hasattr(self._redis, "close"):
             await self._redis.close()

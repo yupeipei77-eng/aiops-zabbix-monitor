@@ -22,7 +22,6 @@ class AlertNormalizer:
         severity_label = SEVERITY_LABELS.get(severity, "not_classified")
         is_recovery = AlertNormalizer._detect_recovery(payload)
         tags = AlertNormalizer._normalize_tags(payload.tags)
-        import json
 
         return {
             "source": "zabbix",
@@ -37,29 +36,56 @@ class AlertNormalizer:
             "item_key": payload.item_key,
             "item_value": payload.item_value,
             "message": payload.trigger_name,
-            "tags": json.dumps(tags, ensure_ascii=False),
-            "raw_payload": json.dumps(payload.raw_payload or payload.model_dump(), ensure_ascii=False),
+            "tags": tags,
+            "raw_payload": payload.raw_payload or payload.model_dump(),
             "is_recovery": is_recovery,
-            "dedup_key": f"zabbix:{payload.trigger_id}:{payload.host_id}",
+            "dedup_key": f"zabbix:{payload.host_id}:{payload.trigger_id}:{payload.item_key}",
             "dedup_count": 1,
             "storm_detected": False,
         }
 
     @staticmethod
-    def _parse_severity(raw: str) -> int:
-        if raw.isdigit():
-            return min(max(int(raw), 0), 5)
-        return SEVERITY_MAP.get(raw.lower(), 0)
+    def _parse_severity(raw: str | int) -> int:
+        raw_text = str(raw).strip()
+        if raw_text.isdigit():
+            return min(max(int(raw_text), 0), 5)
+        return SEVERITY_MAP.get(raw_text.lower(), 0)
 
     @staticmethod
     def _detect_recovery(payload: ZabbixWebhookPayload) -> bool:
+        if str(payload.event_value).strip() == "0":
+            return True
+        if payload.status and payload.status.strip().upper() == "RESOLVED":
+            return True
         name = payload.trigger_name.lower()
         value = payload.item_value.lower()
         recovery_keywords = ["recovery", "resolved", "ok", "up", "normal"]
         return any(kw in name or kw in value for kw in recovery_keywords)
 
     @staticmethod
-    def _normalize_tags(tags: dict | None) -> dict:
-        if tags and isinstance(tags, dict):
+    def _normalize_tags(tags) -> dict:
+        if not tags:
+            return {}
+        if isinstance(tags, dict):
             return tags
+        if isinstance(tags, str):
+            parsed: dict[str, str] = {}
+            for part in tags.split(","):
+                key, sep, value = part.partition("=")
+                if sep and key.strip():
+                    parsed[key.strip()] = value.strip()
+            return parsed
+        if isinstance(tags, list):
+            parsed = {}
+            for item in tags:
+                if isinstance(item, dict):
+                    key = item.get("tag") or item.get("key") or item.get("name")
+                    value = item.get("value")
+                    if key is not None:
+                        parsed[str(key)] = "" if value is None else str(value)
+                elif isinstance(item, str):
+                    key, sep, value = item.partition("=")
+                    if sep and key.strip():
+                        parsed[key.strip()] = value.strip()
+            return parsed
         return {}

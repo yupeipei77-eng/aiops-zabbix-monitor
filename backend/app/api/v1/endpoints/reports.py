@@ -35,6 +35,7 @@ async def dashboard_summary(db: AsyncSession = Depends(get_db)):
     unresolved = await alert_repo.count_unresolved_since(start)
     critical = await alert_repo.count_critical_since(start)
     ai_count = await analysis_repo.count_since(start)
+    llm_call_count = await usage_repo.count_since(start)
     token_usage = await usage_repo.total_tokens_since(start)
 
     return ApiResponse(data={
@@ -42,5 +43,6 @@ async def dashboard_summary(db: AsyncSession = Depends(get_db)):
         "unresolved_alerts": unresolved,
         "critical_alerts": critical,
         "ai_analysis_count": ai_count,
+        "llm_call_count": llm_call_count,
         "token_usage": token_usage,
     })

@@ -50,9 +50,12 @@
 
 ```bash
 cp .env.example .env
+make build
 make up
 make migrate
 make seed
+make webhook-test
+make test
 ```
 
 访问：
@@ -63,13 +66,15 @@ make seed
 
 ```bash
 make up           # 启动服务
+make build        # 构建镜像
 make down         # 停止服务
 make logs         # 查看日志
 make migrate      # 运行数据库迁移
 make seed         # 填充 Mock 数据
-make webhook-test # 测试 Webhook
+make webhook-test # 发送 4 类 Mock Zabbix payload 并查询结果
 make test         # 运行所有测试
 make backend-test # 运行后端测试
+make frontend-test # 构建前端
 ```
 
 ## API 入口
@@ -78,9 +83,10 @@ make backend-test # 运行后端测试
 - `POST /api/v1/webhooks/zabbix`
 - `GET /api/v1/alerts`
 - `GET /api/v1/alerts/{id}`
-- `POST /api/v1/ai/{id}/analyze`
 - `GET /api/v1/ai`
-- `GET /api/v1/llm/usage`
+- `GET /api/v1/ai/alerts/{id}`
+- `POST /api/v1/ai/{id}/analyze`
+- `GET /api/v1/llm`
 - `GET /api/v1/reports/daily`
 - `GET /api/v1/reports/dashboard`
 - `GET/POST /api/v1/knowledge`
@@ -94,6 +100,19 @@ make backend-test # 运行后端测试
 | `WEBHOOK_API_KEY` | Zabbix Webhook 验证 Key | `changeme-webhook-api-key` |
 | `DEFAULT_LLM_PROVIDER` | 默认 LLM 提供商 | `mock` |
 | `ADVANCED_LLM_PROVIDER` | 高级 LLM 提供商 | `mock` |
+| `DEDUP_WINDOW_SECONDS` | 重复告警去重窗口 | `300` |
+| `STORM_WINDOW_SECONDS` | 告警风暴统计窗口 | `600` |
+| `STORM_THRESHOLD` | 风暴阈值 | `50` |
+| `CORS_ORIGINS` | 允许访问后端的前端源 | `http://localhost:3000` |
+
+## 当前 MVP 行为
+
+- Webhook 使用 `X-API-Key` 校验，缺失或错误返回统一 `401` 响应。
+- Zabbix severity 会标准化为 `0-5`，支持 `Disaster`、`High`、`Average`、`Warning`、`Information`、`Not classified`。
+- 去重 key 为 `zabbix:{host_id}:{trigger_id}:{item_key}`，Redis key 为 `aiops:dedup:{dedup_key}`，value 记录 `count`、`first_seen`、`last_seen`。
+- 10 分钟内超过阈值后进入 storm 模式，Webhook 仍入库，但跳过逐条 AI 分析并标记 `storm_detected=true`。
+- 默认 LLM provider 为 `mock`；真实 provider 未配置 API Key 时自动 fallback 到 mock。
+- 知识库当前只做文档保存与列表展示，暂不做向量检索。
 
 ## 目录结构
 

@@ -61,9 +61,21 @@
   "severity": "4",
   "item_key": "system.cpu.util",
   "item_value": "95.2",
+  "event_value": "1",
+  "status": "PROBLEM",
   "event_time": "2025-01-15T10:30:00Z",
   "tags": {"scope": "production"},
   "raw_payload": {}
+}
+```
+
+缺失或错误 API Key：
+
+```json
+{
+  "success": false,
+  "data": null,
+  "message": "Missing API key"
 }
 ```
 
@@ -94,6 +106,22 @@
 
 告警详情。
 
+### GET /api/v1/ai
+
+AI 分析记录列表。
+
+### GET /api/v1/ai/alerts/{alert_id}
+
+按告警 ID 查询 AI 分析结果。未找到时返回：
+
+```json
+{
+  "success": false,
+  "data": null,
+  "message": "AI analysis not found"
+}
+```
+
 ### POST /api/v1/ai/{alert_id}/analyze
 
 触发 AI 分析。
@@ -123,11 +151,7 @@
 }
 ```
 
-### GET /api/v1/ai
-
-AI 分析记录列表。
-
-### GET /api/v1/llm/usage
+### GET /api/v1/llm
 
 LLM Token 用量记录。
 
@@ -135,9 +159,13 @@ LLM Token 用量记录。
 
 日报摘要。
 
+返回字段包含 `total_alerts`、`unresolved_alerts`、`critical_alerts`、`ai_analysis_count`、`llm_call_count`、`token_usage`、`severity_distribution`、`hourly_trend`。
+
 ### GET /api/v1/reports/dashboard
 
 Dashboard 总览数据。
+
+返回字段包含今日告警数、未处理告警数、严重告警数、AI 分析次数、LLM 调用次数和 token 用量。
 
 ### GET /api/v1/knowledge
 

@@ -1,6 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
+from typing import Any
 
 
 class AlertResponse(BaseModel):
@@ -17,8 +18,8 @@ class AlertResponse(BaseModel):
     item_key: str
     item_value: str
     message: str = ""
-    tags: str = "{}"
-    raw_payload: str = "{}"
+    tags: dict[str, Any] = Field(default_factory=dict)
+    raw_payload: dict[str, Any] = Field(default_factory=dict)
     is_recovery: bool = False
     dedup_key: str = ""
     dedup_count: int = 1

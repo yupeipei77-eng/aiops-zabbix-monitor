@@ -18,6 +18,7 @@ export interface DashboardSummary {
   unresolved_alerts: number;
   critical_alerts: number;
   ai_analysis_count: number;
+  llm_call_count: number;
   token_usage: number;
 }
 
@@ -27,6 +28,7 @@ export interface DailyReport {
   unresolved_alerts: number;
   critical_alerts: number;
   ai_analysis_count: number;
+  llm_call_count: number;
   token_usage: number;
   severity_distribution: Record<string, number>;
   hourly_trend: Array<{ hour: number; count: number }>;

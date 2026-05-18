@@ -36,12 +36,11 @@ async def list_knowledge(db: AsyncSession = Depends(get_db)):
 
 @router.post("")
 async def create_knowledge(body: KnowledgeCreateRequest, db: AsyncSession = Depends(get_db)):
-    import json
     doc = KnowledgeDocument(
         title=body.title,
         source=body.source,
         content=body.content,
-        tags=json.dumps(body.tags or [], ensure_ascii=False),
+        tags=body.tags or [],
     )
     db.add(doc)
     await db.flush()

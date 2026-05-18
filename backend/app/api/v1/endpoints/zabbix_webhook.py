@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.schemas.zabbix import ZabbixWebhookPayload
@@ -46,7 +46,7 @@ async def receive_zabbix_webhook(
     if not is_storm:
         orchestrator = AIOrchestrator(db)
         try:
-            result = await orchestrator.analyze_alert(alert.id)
+            await orchestrator.analyze_alert(alert.id)
             logger.info("AI analysis completed for alert %d", alert.id)
         except Exception as e:
             logger.error("AI analysis failed for alert %d: %s", alert.id, str(e))

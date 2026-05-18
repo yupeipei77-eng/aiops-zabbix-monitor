@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Button, Spin, message } from 'antd';
+import { Card, Descriptions, Button, message } from 'antd';
 import { fetchAlert, analyzeAlert } from '../api/alerts';
-import { fetchAnalyses } from '../api/ai';
+import { fetchAnalysisForAlert } from '../api/ai';
 import AlertSeverityTag from '../components/AlertSeverityTag';
 import AIAnalysisPanel from '../components/AIAnalysisPanel';
 import LoadingState from '../components/LoadingState';
@@ -20,9 +20,8 @@ const AlertDetail: React.FC = () => {
 
   const loadAnalysis = async (alertId: number) => {
     try {
-      const resp = await fetchAnalyses(1, 1);
-      const found = resp.data?.find((a) => a.alert_id === alertId) || null;
-      setAnalysis(found);
+      const resp = await fetchAnalysisForAlert(alertId);
+      setAnalysis(resp.success ? resp.data : null);
     } catch {
       // ignore
     }
@@ -58,14 +57,14 @@ const AlertDetail: React.FC = () => {
             id: resp.data.id,
             alert_id: alert.id,
             summary: resp.data.summary,
-            possible_causes: JSON.stringify(resp.data.possible_causes),
-            suggested_actions: JSON.stringify(resp.data.suggested_actions),
+            possible_causes: resp.data.possible_causes,
+            suggested_actions: resp.data.suggested_actions,
             risk_level: resp.data.risk_level,
             confidence: resp.data.confidence,
             need_human_confirm: resp.data.need_human_confirm,
             model_used: resp.data.model_used,
             prompt: '',
-            raw_response: '',
+            raw_response: {},
             latency_ms: 0,
             created_at: new Date().toISOString(),
           });

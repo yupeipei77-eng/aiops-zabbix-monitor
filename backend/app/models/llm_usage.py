@@ -1,12 +1,13 @@
-from sqlalchemy import String, Integer, Boolean, Text, BigInteger
+from sqlalchemy import Boolean, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base, TimestampMixin
+from app.models.types import BIGINT_PK
 
 
 class LLMUsage(Base, TimestampMixin):
     __tablename__ = "llm_usage"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BIGINT_PK, primary_key=True, autoincrement=True)
     provider: Mapped[str] = mapped_column(String(50))
     model: Mapped[str] = mapped_column(String(100))
     context: Mapped[str] = mapped_column(String(100), default="alert_analysis")

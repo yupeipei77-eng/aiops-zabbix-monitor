@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, Descriptions, Tag, Button, Spin, Alert as AntAlert } from 'antd';
 import type { AIAnalysis } from '../types/ai';
 
@@ -30,8 +30,8 @@ const AIAnalysisPanel: React.FC<Props> = ({ analysis, loading, onAnalyze }) => {
     );
   }
 
-  const causes = typeof analysis.possible_causes === 'string' ? JSON.parse(analysis.possible_causes) : analysis.possible_causes;
-  const actions = typeof analysis.suggested_actions === 'string' ? JSON.parse(analysis.suggested_actions) : analysis.suggested_actions;
+  const causes = analysis.possible_causes || [];
+  const actions = analysis.suggested_actions || [];
 
   const riskColors: Record<string, string> = {
     low: 'green',

@@ -52,5 +52,14 @@ services:
     depends_on:
       - backend
 
+  frontend-test:
+    profiles:
+      - test
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: builder
+    command: npm run build
+
 volumes:
   pgdata:

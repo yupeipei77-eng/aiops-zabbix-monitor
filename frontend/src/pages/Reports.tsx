@@ -39,6 +39,7 @@ const Reports: React.FC = () => {
           <Descriptions.Item label="未处理">{report.unresolved_alerts}</Descriptions.Item>
           <Descriptions.Item label="严重告警">{report.critical_alerts}</Descriptions.Item>
           <Descriptions.Item label="AI 分析次数">{report.ai_analysis_count}</Descriptions.Item>
+          <Descriptions.Item label="LLM 调用次数">{report.llm_call_count}</Descriptions.Item>
           <Descriptions.Item label="Token 用量">{report.token_usage}</Descriptions.Item>
         </Descriptions>
       </Card>

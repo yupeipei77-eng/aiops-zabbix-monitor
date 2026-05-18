@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, message, Tag } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, message } from 'antd';
 import client from '../api/client';
 
 interface KnowledgeDoc {

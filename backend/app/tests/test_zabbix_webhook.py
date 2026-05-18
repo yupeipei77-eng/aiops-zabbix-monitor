@@ -1,7 +1,6 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
-from app.core.config import settings
 
 
 @pytest.mark.asyncio
@@ -12,7 +11,8 @@ async def test_zabbix_webhook_requires_api_key():
             "/api/v1/webhooks/zabbix",
             json={"event_id": "test-001", "trigger_name": "Test"},
         )
-    assert resp.status_code == 422
+    assert resp.status_code == 401
+    assert resp.json()["message"] == "Missing API key"
 
 
 @pytest.mark.asyncio
@@ -24,4 +24,5 @@ async def test_zabbix_webhook_invalid_api_key():
             json={"event_id": "test-001", "trigger_name": "Test"},
             headers={"X-API-Key": "wrong-key"},
         )
-    assert resp.status_code == 403
+    assert resp.status_code == 401
+    assert resp.json()["message"] == "Invalid API key"

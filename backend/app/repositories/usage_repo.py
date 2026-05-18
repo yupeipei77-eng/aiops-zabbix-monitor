@@ -31,3 +31,9 @@ class UsageRepo:
             select(func.sum(LLMUsage.total_tokens)).where(LLMUsage.created_at >= since)
         )
         return result.scalar() or 0
+
+    async def count_since(self, since) -> int:
+        result = await self.db.execute(
+            select(func.count(LLMUsage.id)).where(LLMUsage.created_at >= since)
+        )
+        return result.scalar() or 0

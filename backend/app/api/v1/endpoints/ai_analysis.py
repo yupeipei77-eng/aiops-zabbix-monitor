@@ -27,6 +27,15 @@ async def list_analyses(
     )
 
 
+@router.get("/alerts/{alert_id}")
+async def get_analysis_by_alert(alert_id: int, db: AsyncSession = Depends(get_db)):
+    repo = AIAnalysisRepo(db)
+    analysis = await repo.get_by_alert_id(alert_id)
+    if not analysis:
+        return ApiResponse(success=False, data=None, message="AI analysis not found")
+    return ApiResponse(data=AIAnalysisResponse.model_validate(analysis))
+
+
 @router.post("/{alert_id}/analyze")
 async def analyze_alert(
     alert_id: int,

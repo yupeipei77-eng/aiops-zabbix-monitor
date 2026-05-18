@@ -42,6 +42,11 @@ class ReportService:
         )
         token_usage = token_usage_q.scalar() or 0
 
+        llm_calls_q = await self.db.execute(
+            select(func.count(LLMUsage.id)).where(LLMUsage.created_at >= start)
+        )
+        llm_call_count = llm_calls_q.scalar() or 0
+
         severity_dist_q = await self.db.execute(
             select(Alert.severity_label, func.count(Alert.id))
             .where(Alert.created_at >= start)
@@ -63,6 +68,7 @@ class ReportService:
             "unresolved_alerts": unresolved,
             "critical_alerts": critical,
             "ai_analysis_count": ai_count,
+            "llm_call_count": llm_call_count,
             "token_usage": token_usage,
             "severity_distribution": severity_dist,
             "hourly_trend": hourly_trend,

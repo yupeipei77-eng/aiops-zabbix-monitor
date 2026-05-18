@@ -12,8 +12,8 @@ export interface Alert {
   item_key: string;
   item_value: string;
   message: string;
-  tags: string;
-  raw_payload: string;
+  tags: Record<string, unknown>;
+  raw_payload: Record<string, unknown>;
   is_recovery: boolean;
   dedup_key: string;
   dedup_count: number;

@@ -1,4 +1,3 @@
-import json
 import time
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.model_router import ModelRouter
@@ -45,14 +44,14 @@ class AIOrchestrator:
             analysis = await self.analysis_repo.create(
                 alert_id=alert_id,
                 summary=result["summary"],
-                possible_causes=json.dumps(result["possible_causes"], ensure_ascii=False),
-                suggested_actions=json.dumps(result["suggested_actions"], ensure_ascii=False),
+                possible_causes=result["possible_causes"],
+                suggested_actions=result["suggested_actions"],
                 risk_level=result["risk_level"],
                 confidence=result["confidence"],
                 need_human_confirm=result["need_human_confirm"],
                 model_used=provider.name,
                 prompt=prompt,
-                raw_response=json.dumps(result, ensure_ascii=False),
+                raw_response=result,
                 latency_ms=latency_ms,
             )
 

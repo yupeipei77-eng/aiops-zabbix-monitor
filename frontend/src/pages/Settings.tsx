@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Form, Input, Divider, message } from 'antd';
+import { Card, Form, Input, Divider } from 'antd';
 
 const Settings: React.FC = () => (
   <div>

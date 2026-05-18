@@ -7,6 +7,7 @@ Create Date: 2025-01-01
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 revision: str = "001"
 down_revision: Union[str, None] = None
@@ -30,8 +31,8 @@ def upgrade() -> None:
         sa.Column("item_key", sa.String(200), nullable=False),
         sa.Column("item_value", sa.String(500), nullable=False),
         sa.Column("message", sa.Text(), server_default=""),
-        sa.Column("tags", sa.Text(), server_default="{}"),
-        sa.Column("raw_payload", sa.Text(), server_default="{}"),
+        sa.Column("tags", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb")),
+        sa.Column("raw_payload", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb")),
         sa.Column("is_recovery", sa.Boolean(), server_default="false"),
         sa.Column("dedup_key", sa.String(200), server_default=""),
         sa.Column("dedup_count", sa.Integer(), server_default="1"),
@@ -50,14 +51,14 @@ def upgrade() -> None:
         sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
         sa.Column("alert_id", sa.BigInteger(), nullable=False),
         sa.Column("summary", sa.Text(), nullable=False),
-        sa.Column("possible_causes", sa.Text(), server_default="[]"),
-        sa.Column("suggested_actions", sa.Text(), server_default="[]"),
+        sa.Column("possible_causes", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'[]'::jsonb")),
+        sa.Column("suggested_actions", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'[]'::jsonb")),
         sa.Column("risk_level", sa.String(20), nullable=False),
         sa.Column("confidence", sa.Float(), server_default="0"),
         sa.Column("need_human_confirm", sa.Boolean(), server_default="false"),
         sa.Column("model_used", sa.String(50), nullable=False),
         sa.Column("prompt", sa.Text(), server_default=""),
-        sa.Column("raw_response", sa.Text(), server_default=""),
+        sa.Column("raw_response", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb")),
         sa.Column("latency_ms", sa.Integer(), server_default="0"),
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now()),
@@ -89,7 +90,7 @@ def upgrade() -> None:
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("source", sa.String(200), server_default="manual"),
         sa.Column("content", sa.Text(), nullable=False),
-        sa.Column("tags", sa.Text(), server_default="[]"),
+        sa.Column("tags", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'[]'::jsonb")),
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now()),
         sa.PrimaryKeyConstraint("id"),
@@ -103,7 +104,7 @@ def upgrade() -> None:
         sa.Column("description", sa.Text(), server_default=""),
         sa.Column("risk_level", sa.String(20), server_default="low"),
         sa.Column("status", sa.String(20), server_default="draft"),
-        sa.Column("steps", sa.Text(), server_default="[]"),
+        sa.Column("steps", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'[]'::jsonb")),
         sa.Column("dry_run", sa.Boolean(), server_default="true"),
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now()),

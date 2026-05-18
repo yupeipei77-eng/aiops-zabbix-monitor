@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Any, Optional
+from typing import Any
 
 
 class ApiResponse(BaseModel):

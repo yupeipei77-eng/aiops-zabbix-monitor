@@ -1,9 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from sqlalchemy.orm import selectinload
 from app.models.alert import Alert
 from app.schemas.alert import AlertListParams
-from typing import Optional
 
 
 class AlertRepo:

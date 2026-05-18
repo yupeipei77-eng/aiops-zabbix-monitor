@@ -1,11 +1,16 @@
 FROM python:3.11-slim
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-COPY pyproject.toml .
-RUN pip install --no-cache-dir -e ".[dev]"
-
 COPY . .
+RUN pip install --no-cache-dir -e ".[dev]" \
+    && useradd --create-home --shell /usr/sbin/nologin appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8000
 

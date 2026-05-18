@@ -2,14 +2,14 @@ export interface AIAnalysis {
   id: number;
   alert_id: number;
   summary: string;
-  possible_causes: string;
-  suggested_actions: string;
+  possible_causes: string[];
+  suggested_actions: string[];
   risk_level: string;
   confidence: number;
   need_human_confirm: boolean;
   model_used: string;
   prompt: string;
-  raw_response: string;
+  raw_response: Record<string, unknown>;
   latency_ms: number;
   created_at: string;
 }

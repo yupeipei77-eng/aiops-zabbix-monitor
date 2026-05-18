@@ -61,7 +61,7 @@ const Dashboard: React.FC = () => {
           <MetricCard title="AI 分析次数" value={summary?.ai_analysis_count || 0} color="#52c41a" />
         </Col>
         <Col span={4}>
-          <MetricCard title="Token 用量" value={summary?.token_usage || 0} color="#722ed1" />
+          <MetricCard title="LLM 调用次数" value={summary?.llm_call_count || 0} color="#722ed1" />
         </Col>
       </Row>
       <ReactECharts option={chartOption} style={{ height: 350 }} />

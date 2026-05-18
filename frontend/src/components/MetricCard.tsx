@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card, Statistic } from 'antd';
-import type { Color } from 'antd/es/color-picker';
 
 interface Props {
   title: string;
