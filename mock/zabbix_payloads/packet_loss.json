@@ -1,0 +1,22 @@
+{
+  "event_id": "zbx-evt-1004",
+  "trigger_id": "trg-packet-loss",
+  "trigger_name": "High packet loss on {HOST.NAME}",
+  "host_id": "host-app-01",
+  "host_name": "app-server-01",
+  "host_ip": "192.168.1.30",
+  "severity": "2",
+  "item_key": "net.packet.loss[eth0]",
+  "item_value": "12.5",
+  "event_time": "2025-01-15T10:45:00Z",
+  "tags": {
+    "scope": "production",
+    "team": "infra",
+    "service": "application"
+  },
+  "raw_payload": {
+    "source": "zabbix",
+    "host": "app-server-01",
+    "trigger_description": "Packet loss rate exceeds 10%"
+  }
+}

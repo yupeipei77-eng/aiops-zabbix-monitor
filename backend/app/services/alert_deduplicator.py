@@ -1,0 +1,34 @@
+import redis.asyncio as aioredis
+from app.core.config import settings
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+class AlertDeduplicator:
+    def __init__(self):
+        self._redis: aioredis.Redis | None = None
+
+    async def _get_redis(self) -> aioredis.Redis:
+        if self._redis is None:
+            self._redis = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        return self._redis
+
+    async def check_and_record(self, dedup_key: str) -> tuple[bool, int]:
+        redis = await self._get_redis()
+        key = f"aiops:dedup:{dedup_key}"
+        count = await redis.incr(key)
+        if count == 1:
+            await redis.expire(key, settings.DEDUP_WINDOW_SECONDS)
+            return False, 1
+        return True, count
+
+    async def get_dedup_count(self, dedup_key: str) -> int:
+        redis = await self._get_redis()
+        key = f"aiops:dedup:{dedup_key}"
+        val = await redis.get(key)
+        return int(val) if val else 0
+
+    async def close(self) -> None:
+        if self._redis:
+            await self._redis.close()

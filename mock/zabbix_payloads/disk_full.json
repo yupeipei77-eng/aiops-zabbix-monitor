@@ -1,0 +1,22 @@
+{
+  "event_id": "zbx-evt-1002",
+  "trigger_id": "trg-disk-full",
+  "trigger_name": "Disk space low on {HOST.NAME}",
+  "host_id": "host-db-01",
+  "host_name": "db-server-01",
+  "host_ip": "192.168.1.20",
+  "severity": "3",
+  "item_key": "vfs.fs.size[/,pfree]",
+  "item_value": "5.1",
+  "event_time": "2025-01-15T10:35:00Z",
+  "tags": {
+    "scope": "production",
+    "team": "dba",
+    "service": "database"
+  },
+  "raw_payload": {
+    "source": "zabbix",
+    "host": "db-server-01",
+    "trigger_description": "Free disk space on / is less than 10%"
+  }
+}

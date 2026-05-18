@@ -1,0 +1,22 @@
+{
+  "event_id": "zbx-evt-1003",
+  "trigger_id": "trg-if-down",
+  "trigger_name": "Interface {IFNAME} down on {HOST.NAME}",
+  "host_id": "host-router-01",
+  "host_name": "router-core-01",
+  "host_ip": "192.168.1.1",
+  "severity": "5",
+  "item_key": "net.if.status[eth0]",
+  "item_value": "0",
+  "event_time": "2025-01-15T10:40:00Z",
+  "tags": {
+    "scope": "production",
+    "team": "network",
+    "service": "core-network"
+  },
+  "raw_payload": {
+    "source": "zabbix",
+    "host": "router-core-01",
+    "trigger_description": "Network interface eth0 status is down"
+  }
+}

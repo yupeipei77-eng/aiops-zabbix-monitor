@@ -1,0 +1,22 @@
+{
+  "event_id": "zbx-evt-1001",
+  "trigger_id": "trg-cpu-high",
+  "trigger_name": "CPU usage over 90% on {HOST.NAME}",
+  "host_id": "host-web-01",
+  "host_name": "web-server-01",
+  "host_ip": "192.168.1.10",
+  "severity": "4",
+  "item_key": "system.cpu.util",
+  "item_value": "95.2",
+  "event_time": "2025-01-15T10:30:00Z",
+  "tags": {
+    "scope": "production",
+    "team": "infra",
+    "service": "web"
+  },
+  "raw_payload": {
+    "source": "zabbix",
+    "host": "web-server-01",
+    "trigger_description": "CPU utilization exceeds 90% for 5 minutes"
+  }
+}
