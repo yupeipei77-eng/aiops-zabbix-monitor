@@ -1,10 +1,10 @@
 # AIOps Zabbix Monitor
 
-面向 Zabbix 告警场景的 AI 智能运维平台。项目把 Zabbix Webhook、告警标准化、去重与风暴检测、LLM 分析、知识库和前端看板整合成一条完整链路，帮助运维人员更快理解告警、定位原因并给出处理建议。
+面向 Zabbix 告警场景的智能运维监控平台。项目首先是一个 Zabbix 告警接入、展示和统计平台，AI 只是可选的辅助分析模块；即使完全关闭 AI，Webhook 接入、告警入库、去重、风暴检测、前端展示和报表统计也会正常工作。
 
 ## 一句话定位
 
-这是一个“Zabbix 告警接入 + AI 分析 + 运维可视化”的全栈项目。
+这是一个“Zabbix 告警接入 + 运维可视化 + 可选 AI 辅助分析”的全栈项目。
 
 ## 给大模型的快速理解
 
@@ -14,7 +14,7 @@
 - 将不同格式的告警统一为标准结构
 - 做告警去重，避免重复分析
 - 检测短时间内的告警风暴并触发降级策略
-- 调用可插拔 LLM Provider 生成告警分析、归因和处置建议
+- 按配置决定是否调用可插拔 LLM Provider 生成告警分析、归因和处置建议
 - 将分析结果、用量和知识库内容持久化
 - 通过前端 Dashboard / Alerts / AI Analysis / Reports / Knowledge Base 展示结果
 
@@ -24,9 +24,10 @@
 2. `AlertNormalizer` 把原始 payload 转成统一告警模型
 3. `AlertDeduplicator` 基于 Redis 去重
 4. `StormDetector` 判断是否进入告警风暴状态
-5. `AIOrchestrator` 选择模型并生成分析结果
-6. `ReportService`、仓储层和数据库保存分析、告警和用量数据
-7. React 前端读取 REST API 展示告警、分析结论和报表
+5. `ModelRouter.should_analyze()` 判断全局和等级策略，低等级或关闭 AI 时直接跳过分析
+6. `AIOrchestrator` 在策略允许时选择模型并生成分析结果
+7. `ReportService`、仓储层和数据库保存分析、告警和用量数据
+8. React 前端读取 REST API 展示告警、分析结论和报表
 
 ### 分层架构
 
@@ -48,7 +49,7 @@
 
 ## 快速启动
 
-当前 MVP 默认使用 `mock` LLM Provider，不需要配置任何真实模型 Key 就能跑通 Webhook、入库、Mock AI 分析和前端展示。
+当前 MVP 默认启用 AI 开关，但只对高危/灾难等级自动尝试分析；没有配置真实模型 Key 时会 fallback 到 `mock`。如果设置 `AI_ANALYSIS_ENABLED=false`，系统仍可作为普通 Zabbix 告警接入、展示和统计平台运行。
 
 ```bash
 cp .env.example .env
@@ -102,6 +103,7 @@ make frontend-test # 构建前端
 | `WEBHOOK_API_KEY` | Zabbix Webhook 验证 Key | `changeme-webhook-api-key` |
 | `DEFAULT_LLM_PROVIDER` | 默认 LLM 提供商 | `mock` |
 | `ADVANCED_LLM_PROVIDER` | 高级 LLM 提供商 | `mock` |
+| `AI_ANALYSIS_ENABLED` | AI 分析总开关，关闭后不自动或手动调用模型 | `true` |
 | `DEEPSEEK_API_KEY` | DeepSeek API Key，留空时不会调用 DeepSeek | 空 |
 | `DEEPSEEK_BASE_URL` | DeepSeek OpenAI-compatible API 地址，留空使用 `https://api.deepseek.com` | 空 |
 | `DEEPSEEK_MODEL` | DeepSeek 模型名 | `deepseek-chat` |
@@ -113,13 +115,61 @@ make frontend-test # 构建前端
 | `GATEWAY_DEFAULT_MODEL` | 中转站默认模型 | `deepseek-v4-flash` |
 | `GATEWAY_PROVIDER_NAME` | 中转站用量记录里的 provider 名称 | `gateway` |
 | `LLM_POLICY_LOW_PROVIDER` / `LLM_POLICY_LOW_MODEL` | severity `0-2` 使用的 provider/model | `mock` / `mock` |
+| `LLM_POLICY_LOW_ENABLED` | severity `0-2` 是否自动 AI 分析 | `false` |
 | `LLM_POLICY_MEDIUM_PROVIDER` / `LLM_POLICY_MEDIUM_MODEL` | severity `3` 使用的 provider/model | `mock` / `mock` |
+| `LLM_POLICY_MEDIUM_ENABLED` | severity `3` 是否自动 AI 分析 | `false` |
 | `LLM_POLICY_HIGH_PROVIDER` / `LLM_POLICY_HIGH_MODEL` | severity `4` 使用的 provider/model | `mock` / `mock` |
+| `LLM_POLICY_HIGH_ENABLED` | severity `4` 是否自动 AI 分析 | `true` |
 | `LLM_POLICY_CRITICAL_PROVIDER` / `LLM_POLICY_CRITICAL_MODEL` | severity `5` 使用的 provider/model | `mock` / `mock` |
+| `LLM_POLICY_CRITICAL_ENABLED` | severity `5` 是否自动 AI 分析 | `true` |
 | `DEDUP_WINDOW_SECONDS` | 重复告警去重窗口 | `300` |
 | `STORM_WINDOW_SECONDS` | 告警风暴统计窗口 | `600` |
 | `STORM_THRESHOLD` | 风暴阈值 | `50` |
 | `CORS_ORIGINS` | 允许访问后端的前端源 | `http://localhost:3000` |
+
+## AI 可选开关
+
+本项目首先是 Zabbix 监控平台，AI 只负责辅助分析。关闭 AI 后，系统仍然可以作为普通 Zabbix 告警接入、展示、统计平台使用。
+
+完全关闭 AI：
+
+```env
+AI_ANALYSIS_ENABLED=false
+```
+
+只让严重和灾难告警走 AI：
+
+```env
+AI_ANALYSIS_ENABLED=true
+LLM_POLICY_LOW_ENABLED=false
+LLM_POLICY_MEDIUM_ENABLED=false
+LLM_POLICY_HIGH_ENABLED=true
+LLM_POLICY_CRITICAL_ENABLED=true
+```
+
+所有等级自定义模型：
+
+```env
+AI_ANALYSIS_ENABLED=true
+
+LLM_POLICY_LOW_ENABLED=true
+LLM_POLICY_LOW_PROVIDER=gateway
+LLM_POLICY_LOW_MODEL=deepseek-v4-flash
+
+LLM_POLICY_MEDIUM_ENABLED=true
+LLM_POLICY_MEDIUM_PROVIDER=deepseek
+LLM_POLICY_MEDIUM_MODEL=deepseek-v4-flash
+
+LLM_POLICY_HIGH_ENABLED=true
+LLM_POLICY_HIGH_PROVIDER=deepseek
+LLM_POLICY_HIGH_MODEL=deepseek-v4-pro
+
+LLM_POLICY_CRITICAL_ENABLED=true
+LLM_POLICY_CRITICAL_PROVIDER=mimo
+LLM_POLICY_CRITICAL_MODEL=mimo-v2.5-pro
+```
+
+当某个等级的 `LLM_POLICY_*_ENABLED=false` 时，该等级告警仍会正常入库、展示、统计，只是不自动调用大模型。手动分析接口传 `force=true` 可以覆盖等级关闭；但 `AI_ANALYSIS_ENABLED=false` 是全局关闭，手动分析也会被禁止。
 
 ## 配置 DeepSeek 原生 API
 
@@ -142,8 +192,10 @@ DEEPSEEK_MODEL=deepseek-v4-flash
 
 LLM_POLICY_HIGH_PROVIDER=deepseek
 LLM_POLICY_HIGH_MODEL=deepseek-v4-pro
+LLM_POLICY_HIGH_ENABLED=true
 LLM_POLICY_CRITICAL_PROVIDER=deepseek
 LLM_POLICY_CRITICAL_MODEL=deepseek-v4-pro
+LLM_POLICY_CRITICAL_ENABLED=true
 ```
 
 DeepSeek 调用失败时，`AIOrchestrator` 会记录一条 `success=false` 的 `llm_usage`，然后自动 fallback 到 `mock`，避免 Webhook 主链路因为模型异常而失败。
@@ -159,6 +211,7 @@ MIMO_MODEL=mimo-v2.5-pro
 
 LLM_POLICY_CRITICAL_PROVIDER=mimo
 LLM_POLICY_CRITICAL_MODEL=mimo-v2.5-pro
+LLM_POLICY_CRITICAL_ENABLED=true
 ```
 
 `MimoProvider` 默认按 OpenAI-compatible Chat Completions 调用 `POST {MIMO_BASE_URL}/chat/completions`。如果 `MIMO_BASE_URL` 留空，默认使用 `https://api.mimo-v2.com/v1`。如果你的 Mimo 接口不是 OpenAI-compatible，需要按平台文档修改 `backend/app/llm/mimo_provider.py` 里的 `chat()` 请求格式。
@@ -183,15 +236,19 @@ GATEWAY_PROVIDER_NAME=gateway
 ```env
 LLM_POLICY_LOW_PROVIDER=gateway
 LLM_POLICY_LOW_MODEL=deepseek-v4-flash
+LLM_POLICY_LOW_ENABLED=false
 
 LLM_POLICY_MEDIUM_PROVIDER=deepseek
 LLM_POLICY_MEDIUM_MODEL=deepseek-v4-flash
+LLM_POLICY_MEDIUM_ENABLED=false
 
 LLM_POLICY_HIGH_PROVIDER=deepseek
 LLM_POLICY_HIGH_MODEL=deepseek-v4-pro
+LLM_POLICY_HIGH_ENABLED=true
 
 LLM_POLICY_CRITICAL_PROVIDER=mimo
 LLM_POLICY_CRITICAL_MODEL=mimo-v2.5-pro
+LLM_POLICY_CRITICAL_ENABLED=true
 ```
 
 映射规则：
@@ -213,7 +270,8 @@ Content-Type: application/json
 
 {
   "provider": "gateway",
-  "model": "deepseek-v4-flash"
+  "model": "deepseek-v4-flash",
+  "force": true
 }
 ```
 
@@ -240,6 +298,8 @@ Content-Type: application/json
 - 去重 key 为 `zabbix:{host_id}:{trigger_id}:{item_key}`，Redis key 为 `aiops:dedup:{dedup_key}`，value 记录 `count`、`first_seen`、`last_seen`。
 - 重复告警不会新增 `alerts` 行，只更新原告警的 `dedup_count` 和 `updated_at`，也不会重复触发 AI。
 - 10 分钟内超过阈值后进入 storm 模式，Webhook 仍入库，但跳过逐条 AI 分析并标记 `storm_detected=true`。
+- `AI_ANALYSIS_ENABLED=false` 时不会调用任何模型，Webhook 主链路仍成功。
+- 低/中/高/灾难等级可分别通过 `LLM_POLICY_*_ENABLED` 控制是否自动分析。
 - 默认 LLM provider 为 `mock`；真实 provider 未配置 API Key 时自动 fallback 到 mock。
 - 知识库当前只做文档保存与列表展示，暂不做向量检索。
 

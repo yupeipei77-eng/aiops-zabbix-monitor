@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     DEFAULT_LLM_PROVIDER: str = "mock"
     ADVANCED_LLM_PROVIDER: str = "mock"
+    AI_ANALYSIS_ENABLED: bool = True
 
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4o"
@@ -38,12 +39,16 @@ class Settings(BaseSettings):
 
     LLM_POLICY_LOW_PROVIDER: str = "mock"
     LLM_POLICY_LOW_MODEL: str = "mock"
+    LLM_POLICY_LOW_ENABLED: bool = False
     LLM_POLICY_MEDIUM_PROVIDER: str = "mock"
     LLM_POLICY_MEDIUM_MODEL: str = "mock"
+    LLM_POLICY_MEDIUM_ENABLED: bool = False
     LLM_POLICY_HIGH_PROVIDER: str = "mock"
     LLM_POLICY_HIGH_MODEL: str = "mock"
+    LLM_POLICY_HIGH_ENABLED: bool = True
     LLM_POLICY_CRITICAL_PROVIDER: str = "mock"
     LLM_POLICY_CRITICAL_MODEL: str = "mock"
+    LLM_POLICY_CRITICAL_ENABLED: bool = True
 
     DEDUP_WINDOW_SECONDS: int = 300
     STORM_WINDOW_SECONDS: int = 600

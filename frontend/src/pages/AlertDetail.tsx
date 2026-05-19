@@ -16,12 +16,14 @@ const AlertDetail: React.FC = () => {
   const [alert, setAlert] = useState<Alert | null>(null);
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadAnalysis = async (alertId: number) => {
     try {
       const resp = await fetchAnalysisForAlert(alertId);
       setAnalysis(resp.success ? resp.data : null);
+      setAiError(null);
     } catch {
       // ignore
     }
@@ -48,21 +50,26 @@ const AlertDetail: React.FC = () => {
   const handleAnalyze = async () => {
     if (!alert) return;
     setAnalyzing(true);
+    setAiError(null);
     try {
-      const resp = await analyzeAlert(alert.id);
+      const resp = await analyzeAlert(alert.id, { force: !alert.ai_analysis_enabled });
       if (resp.success) {
+        if (resp.data?.ai_analysis_skipped) {
+          message.info(resp.data.skipped_reason || '当前策略未启用 AI 分析');
+          return;
+        }
         message.success('AI 分析完成');
-        if (resp.data) {
+        if (resp.data && resp.data.id) {
           setAnalysis({
             id: resp.data.id,
             alert_id: alert.id,
-            summary: resp.data.summary,
-            possible_causes: resp.data.possible_causes,
-            suggested_actions: resp.data.suggested_actions,
-            risk_level: resp.data.risk_level,
-            confidence: resp.data.confidence,
-            need_human_confirm: resp.data.need_human_confirm,
-            model_used: resp.data.model_used,
+            summary: resp.data.summary || '',
+            possible_causes: resp.data.possible_causes || [],
+            suggested_actions: resp.data.suggested_actions || [],
+            risk_level: resp.data.risk_level || 'medium',
+            confidence: resp.data.confidence || 0,
+            need_human_confirm: resp.data.need_human_confirm || false,
+            model_used: resp.data.model_used || 'unknown',
             prompt: '',
             raw_response: {},
             latency_ms: 0,
@@ -70,9 +77,11 @@ const AlertDetail: React.FC = () => {
           });
         }
       } else {
+        setAiError(resp.message || '分析失败');
         message.error(resp.message || '分析失败');
       }
-    } catch {
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : '分析请求失败');
       message.error('分析请求失败');
     } finally {
       setAnalyzing(false);
@@ -101,7 +110,14 @@ const AlertDetail: React.FC = () => {
         </Descriptions>
       </Card>
       <div style={{ marginTop: 16 }}>
-        <AIAnalysisPanel analysis={analysis} loading={analyzing} onAnalyze={handleAnalyze} />
+        <AIAnalysisPanel
+          analysis={analysis}
+          loading={analyzing}
+          onAnalyze={handleAnalyze}
+          policyEnabled={alert.ai_analysis_enabled}
+          skippedReason={alert.ai_skip_reason}
+          aiError={aiError}
+        />
       </div>
     </div>
   );

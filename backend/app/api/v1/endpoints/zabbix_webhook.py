@@ -7,6 +7,7 @@ from app.services.alert_normalizer import AlertNormalizer
 from app.services.alert_deduplicator import AlertDeduplicator
 from app.services.storm_detector import StormDetector
 from app.services.ai_orchestrator import AIOrchestrator
+from app.services.model_router import ModelRouter
 from app.repositories.alert_repo import AlertRepo
 from app.core.security import verify_api_key
 from app.core.logging import get_logger
@@ -45,13 +46,24 @@ async def receive_zabbix_webhook(
                 "is_duplicate": True,
                 "dedup_count": count,
                 "storm_detected": bool(alert.storm_detected),
+                "ai_analysis_skipped": True,
+                "skipped_reason": "Duplicate alert does not trigger AI analysis",
             },
             message="Duplicate alert recorded",
         )
 
     alert = await alert_repo.create(**normalized)
 
-    if not is_storm:
+    ai_analysis_skipped = False
+    skipped_reason = ""
+    if is_storm:
+        ai_analysis_skipped = True
+        skipped_reason = "Storm mode skips per-alert AI analysis"
+    else:
+        should_analyze, skipped_reason = ModelRouter.should_analyze(alert.severity)
+        ai_analysis_skipped = not should_analyze
+
+    if not ai_analysis_skipped:
         orchestrator = AIOrchestrator(db)
         try:
             await orchestrator.analyze_alert(alert.id)
@@ -61,6 +73,12 @@ async def receive_zabbix_webhook(
 
     return ApiResponse(
         success=True,
-        data={"alert_id": alert.id, "is_duplicate": False, "storm_detected": is_storm},
+        data={
+            "alert_id": alert.id,
+            "is_duplicate": False,
+            "storm_detected": is_storm,
+            "ai_analysis_skipped": ai_analysis_skipped,
+            "skipped_reason": skipped_reason,
+        },
         message="Alert accepted",
     )

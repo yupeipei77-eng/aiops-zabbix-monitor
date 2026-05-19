@@ -18,6 +18,8 @@ export interface Alert {
   dedup_key: string;
   dedup_count: number;
   storm_detected: boolean;
+  ai_analysis_enabled: boolean;
+  ai_skip_reason: string;
   created_at: string;
   updated_at: string;
 }

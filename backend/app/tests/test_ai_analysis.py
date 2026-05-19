@@ -369,6 +369,28 @@ def test_model_router_uses_policy_provider_and_model_by_severity(monkeypatch):
     assert (critical_provider.name, critical_provider.model) == ("mimo", "mimo-v2.5-pro")
 
 
+def test_model_router_should_analyze_honors_global_switch(monkeypatch):
+    monkeypatch.setattr("app.services.model_router.settings.AI_ANALYSIS_ENABLED", False)
+
+    should_analyze, reason = ModelRouter.should_analyze(5)
+
+    assert should_analyze is False
+    assert reason == "AI analysis globally disabled"
+
+
+def test_model_router_should_analyze_honors_severity_switches(monkeypatch):
+    monkeypatch.setattr("app.services.model_router.settings.AI_ANALYSIS_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_LOW_ENABLED", False)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_MEDIUM_ENABLED", False)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_CRITICAL_ENABLED", True)
+
+    assert ModelRouter.should_analyze(2) == (False, "AI disabled for low severity")
+    assert ModelRouter.should_analyze(3) == (False, "AI disabled for medium severity")
+    assert ModelRouter.should_analyze(4) == (True, "")
+    assert ModelRouter.should_analyze(5) == (True, "")
+
+
 def test_model_router_prefers_manual_provider_and_model(monkeypatch):
     monkeypatch.setattr("app.services.model_router.settings.GATEWAY_API_KEY", "gateway-key")
     monkeypatch.setattr("app.services.model_router.settings.GATEWAY_BASE_URL", "https://gateway.test/v1")

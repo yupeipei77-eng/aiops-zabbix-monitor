@@ -24,3 +24,4 @@ class AIAnalysisResponse(BaseModel):
 class AIAnalysisRequest(BaseModel):
     provider: Optional[str] = None
     model: Optional[str] = None
+    force: bool = False

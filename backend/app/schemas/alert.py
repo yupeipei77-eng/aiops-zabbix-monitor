@@ -24,6 +24,8 @@ class AlertResponse(BaseModel):
     dedup_key: str = ""
     dedup_count: int = 1
     storm_detected: bool = False
+    ai_analysis_enabled: bool = True
+    ai_skip_reason: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

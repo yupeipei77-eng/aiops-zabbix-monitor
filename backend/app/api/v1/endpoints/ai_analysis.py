@@ -47,6 +47,7 @@ async def analyze_alert(
         alert_id,
         preferred_provider=body.provider if body else None,
         preferred_model=body.model if body else None,
+        force=body.force if body else False,
     )
     if not result["success"]:
         return ApiResponse(success=False, data=None, message=result["message"])

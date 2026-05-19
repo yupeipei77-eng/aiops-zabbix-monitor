@@ -23,10 +23,26 @@ class AIOrchestrator:
         alert_id: int,
         preferred_provider: str | None = None,
         preferred_model: str | None = None,
+        force: bool = False,
     ) -> dict:
         alert = await self.alert_repo.get_by_id(alert_id)
         if not alert:
             return {"success": False, "data": None, "message": "Alert not found"}
+
+        should_analyze, skipped_reason = ModelRouter.should_analyze(alert.severity)
+        if not should_analyze:
+            if skipped_reason == "AI analysis globally disabled":
+                return {"success": False, "data": None, "message": skipped_reason}
+            if not force:
+                return {
+                    "success": True,
+                    "data": {
+                        "alert_id": alert_id,
+                        "ai_analysis_skipped": True,
+                        "skipped_reason": skipped_reason,
+                    },
+                    "message": "",
+                }
 
         alert_data = {
             "trigger_name": alert.trigger_name,

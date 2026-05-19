@@ -6,9 +6,12 @@ interface Props {
   analysis: AIAnalysis | null;
   loading?: boolean;
   onAnalyze?: () => void;
+  policyEnabled?: boolean;
+  skippedReason?: string;
+  aiError?: string | null;
 }
 
-const AIAnalysisPanel: React.FC<Props> = ({ analysis, loading, onAnalyze }) => {
+const AIAnalysisPanel: React.FC<Props> = ({ analysis, loading, onAnalyze, policyEnabled = true, skippedReason = '', aiError }) => {
   if (loading) {
     return (
       <Card title="AI 分析">
@@ -18,12 +21,27 @@ const AIAnalysisPanel: React.FC<Props> = ({ analysis, loading, onAnalyze }) => {
   }
 
   if (!analysis) {
+    const globallyDisabled = skippedReason === 'AI analysis globally disabled';
+    const showAnalyzeButton = Boolean(onAnalyze) && !globallyDisabled;
+    const status = aiError ? (
+      <AntAlert message="AI 分析失败，但不影响告警监控主流程。" description={aiError} type="warning" showIcon />
+    ) : !policyEnabled ? (
+      <AntAlert
+        message="当前告警等级未启用 AI 分析，平台将按普通 Zabbix 监控方式处理。"
+        description={skippedReason || undefined}
+        type="info"
+        showIcon
+      />
+    ) : (
+      <AntAlert message="暂无 AI 分析结果" type="info" showIcon />
+    );
+
     return (
       <Card title="AI 分析">
-        <AntAlert message="暂无 AI 分析结果" type="info" showIcon />
-        {onAnalyze && (
+        {status}
+        {showAnalyzeButton && (
           <Button type="primary" onClick={onAnalyze} style={{ marginTop: 16 }}>
-            触发 AI 分析
+            手动 AI 分析
           </Button>
         )}
       </Card>

@@ -22,6 +22,28 @@ PROVIDER_REGISTRY: dict[str, type[BaseLLMProvider]] = {
 
 class ModelRouter:
     @staticmethod
+    def should_analyze(severity: int) -> tuple[bool, str]:
+        if not settings.AI_ANALYSIS_ENABLED:
+            return False, "AI analysis globally disabled"
+
+        if severity >= 5:
+            enabled = settings.LLM_POLICY_CRITICAL_ENABLED
+            level = "critical"
+        elif severity == 4:
+            enabled = settings.LLM_POLICY_HIGH_ENABLED
+            level = "high"
+        elif severity == 3:
+            enabled = settings.LLM_POLICY_MEDIUM_ENABLED
+            level = "medium"
+        else:
+            enabled = settings.LLM_POLICY_LOW_ENABLED
+            level = "low"
+
+        if not enabled:
+            return False, f"AI disabled for {level} severity"
+        return True, ""
+
+    @staticmethod
     def get_provider(
         severity: int,
         preferred_provider: str | None = None,

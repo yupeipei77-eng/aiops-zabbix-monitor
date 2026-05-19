@@ -70,7 +70,12 @@ async def test_webhook_invalid_api_key_returns_401(client):
 
 
 @pytest.mark.asyncio
-async def test_webhook_cpu_alert_creates_alert_analysis_usage(client, db_session, fake_redis):
+async def test_webhook_cpu_alert_creates_alert_analysis_usage(client, db_session, fake_redis, monkeypatch):
+    monkeypatch.setattr("app.services.model_router.settings.AI_ANALYSIS_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_PROVIDER", "mock")
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_MODEL", "mock")
+
     response = await client.post(
         "/api/v1/webhooks/zabbix",
         json=load_payload("cpu_high.json"),
@@ -95,7 +100,12 @@ async def test_webhook_cpu_alert_creates_alert_analysis_usage(client, db_session
 
 
 @pytest.mark.asyncio
-async def test_duplicate_webhook_updates_count_without_new_analysis(client, db_session, fake_redis):
+async def test_duplicate_webhook_updates_count_without_new_analysis(client, db_session, fake_redis, monkeypatch):
+    monkeypatch.setattr("app.services.model_router.settings.AI_ANALYSIS_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_PROVIDER", "mock")
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_MODEL", "mock")
+
     payload = load_payload("cpu_high.json")
     headers = {"X-API-Key": "changeme-webhook-api-key"}
 
@@ -119,6 +129,8 @@ async def test_duplicate_webhook_updates_count_without_new_analysis(client, db_s
 
 @pytest.mark.asyncio
 async def test_storm_webhook_marks_alert_and_skips_ai(client, db_session, fake_redis, monkeypatch):
+    monkeypatch.setattr("app.services.model_router.settings.AI_ANALYSIS_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_LOW_ENABLED", True)
     monkeypatch.setattr("app.services.storm_detector.settings.STORM_THRESHOLD", 0)
     response = await client.post(
         "/api/v1/webhooks/zabbix",
@@ -128,6 +140,7 @@ async def test_storm_webhook_marks_alert_and_skips_ai(client, db_session, fake_r
 
     assert response.status_code == 200
     assert response.json()["data"]["storm_detected"] is True
+    assert response.json()["data"]["ai_analysis_skipped"] is True
 
     alert = (await db_session.execute(select(Alert))).scalars().one()
     assert alert.storm_detected is True
@@ -136,10 +149,153 @@ async def test_storm_webhook_marks_alert_and_skips_ai(client, db_session, fake_r
 
 
 @pytest.mark.asyncio
-async def test_alert_list_detail_manual_analyze_and_usage(client, db_session, fake_redis):
+async def test_ai_globally_disabled_webhook_still_records_alert(client, db_session, fake_redis, monkeypatch):
+    monkeypatch.setattr("app.services.model_router.settings.AI_ANALYSIS_ENABLED", False)
+
     create = await client.post(
         "/api/v1/webhooks/zabbix",
-        json=load_payload("disk_full.json"),
+        json=load_payload("cpu_high.json"),
+        headers={"X-API-Key": "changeme-webhook-api-key"},
+    )
+
+    assert create.status_code == 200
+    assert create.json()["data"]["ai_analysis_skipped"] is True
+    assert create.json()["data"]["skipped_reason"] == "AI analysis globally disabled"
+    assert await db_session.scalar(select(func.count(Alert.id))) == 1
+    assert await db_session.scalar(select(func.count(AIAnalysis.id))) == 0
+    assert await db_session.scalar(select(func.count(LLMUsage.id))) == 0
+
+    alerts_response = await client.get("/api/v1/alerts")
+    dashboard_response = await client.get("/api/v1/reports/dashboard")
+    daily_response = await client.get("/api/v1/reports/daily")
+
+    assert alerts_response.status_code == 200
+    assert alerts_response.json()["total"] == 1
+    assert alerts_response.json()["data"][0]["ai_analysis_enabled"] is False
+    assert alerts_response.json()["data"][0]["ai_skip_reason"] == "AI analysis globally disabled"
+    assert dashboard_response.json()["data"]["total_alerts"] == 1
+    assert daily_response.json()["data"]["total_alerts"] == 1
+
+
+@pytest.mark.asyncio
+async def test_low_severity_policy_disabled_skips_ai(client, db_session, fake_redis, monkeypatch):
+    monkeypatch.setattr("app.services.model_router.settings.AI_ANALYSIS_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_LOW_ENABLED", False)
+
+    response = await client.post(
+        "/api/v1/webhooks/zabbix",
+        json=load_payload("packet_loss.json"),
+        headers={"X-API-Key": "changeme-webhook-api-key"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["data"]["ai_analysis_skipped"] is True
+    assert body["data"]["skipped_reason"] == "AI disabled for low severity"
+    assert await db_session.scalar(select(func.count(Alert.id))) == 1
+    assert await db_session.scalar(select(func.count(AIAnalysis.id))) == 0
+
+
+@pytest.mark.asyncio
+async def test_high_severity_policy_enabled_creates_ai_analysis(client, db_session, fake_redis, monkeypatch):
+    monkeypatch.setattr("app.services.model_router.settings.AI_ANALYSIS_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_PROVIDER", "mock")
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_MODEL", "mock")
+
+    response = await client.post(
+        "/api/v1/webhooks/zabbix",
+        json=load_payload("cpu_high.json"),
+        headers={"X-API-Key": "changeme-webhook-api-key"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["ai_analysis_skipped"] is False
+    assert await db_session.scalar(select(func.count(Alert.id))) == 1
+    assert await db_session.scalar(select(func.count(AIAnalysis.id))) == 1
+
+
+@pytest.mark.asyncio
+async def test_manual_analyze_respects_policy_and_force(client, db_session, monkeypatch):
+    monkeypatch.setattr("app.services.model_router.settings.AI_ANALYSIS_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_LOW_ENABLED", False)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_LOW_PROVIDER", "mock")
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_LOW_MODEL", "mock")
+    alert = Alert(
+        source="zabbix",
+        event_id="evt-manual-policy",
+        trigger_id="trg-manual-policy",
+        trigger_name="Packet loss",
+        host_id="host-manual-policy",
+        host_name="router-01",
+        host_ip="10.0.0.5",
+        severity=2,
+        severity_label="warning",
+        item_key="icmppingloss",
+        item_value="35",
+        message="Packet loss",
+        tags={},
+        raw_payload={},
+        is_recovery=False,
+        dedup_key="zabbix:host-manual-policy:trg-manual-policy:icmppingloss",
+        dedup_count=1,
+        storm_detected=False,
+    )
+    db_session.add(alert)
+    await db_session.flush()
+
+    skipped = await client.post(f"/api/v1/ai/{alert.id}/analyze", json={})
+    forced = await client.post(f"/api/v1/ai/{alert.id}/analyze", json={"force": True})
+
+    assert skipped.json()["success"] is True
+    assert skipped.json()["data"]["ai_analysis_skipped"] is True
+    assert await db_session.scalar(select(func.count(AIAnalysis.id))) == 1
+    assert forced.json()["success"] is True
+    assert forced.json()["data"]["model_used"] == "mock"
+
+
+@pytest.mark.asyncio
+async def test_manual_analyze_global_disabled_blocks_even_force(client, db_session, monkeypatch):
+    monkeypatch.setattr("app.services.model_router.settings.AI_ANALYSIS_ENABLED", False)
+    alert = Alert(
+        source="zabbix",
+        event_id="evt-global-disabled",
+        trigger_id="trg-global-disabled",
+        trigger_name="CPU high",
+        host_id="host-global-disabled",
+        host_name="web-02",
+        host_ip="10.0.0.6",
+        severity=4,
+        severity_label="high",
+        item_key="system.cpu.util",
+        item_value="93",
+        message="CPU high",
+        tags={},
+        raw_payload={},
+        is_recovery=False,
+        dedup_key="zabbix:host-global-disabled:trg-global-disabled:system.cpu.util",
+        dedup_count=1,
+        storm_detected=False,
+    )
+    db_session.add(alert)
+    await db_session.flush()
+
+    response = await client.post(f"/api/v1/ai/{alert.id}/analyze", json={"force": True})
+
+    assert response.json()["success"] is False
+    assert response.json()["message"] == "AI analysis globally disabled"
+    assert await db_session.scalar(select(func.count(AIAnalysis.id))) == 0
+
+
+@pytest.mark.asyncio
+async def test_alert_list_detail_manual_analyze_and_usage(client, db_session, fake_redis, monkeypatch):
+    monkeypatch.setattr("app.services.model_router.settings.AI_ANALYSIS_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_ENABLED", True)
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_PROVIDER", "mock")
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_HIGH_MODEL", "mock")
+    create = await client.post(
+        "/api/v1/webhooks/zabbix",
+        json=load_payload("cpu_high.json"),
         headers={"X-API-Key": "changeme-webhook-api-key"},
     )
     alert_id = create.json()["data"]["alert_id"]
