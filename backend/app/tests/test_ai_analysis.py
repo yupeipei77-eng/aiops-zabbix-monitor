@@ -80,7 +80,8 @@ async def test_deepseek_provider_parses_openai_compatible_json(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_orchestrator_falls_back_to_mock_when_deepseek_call_fails(db_session, monkeypatch):
-    monkeypatch.setattr("app.services.model_router.settings.ADVANCED_LLM_PROVIDER", "deepseek")
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_CRITICAL_PROVIDER", "deepseek")
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_CRITICAL_MODEL", "deepseek-chat")
     monkeypatch.setattr("app.llm.deepseek_provider.settings.DEEPSEEK_API_KEY", "test-key")
 
     async def fail_deepseek(_self, _prompt):
@@ -177,7 +178,8 @@ async def test_mimo_provider_parses_openai_compatible_json(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_orchestrator_falls_back_to_mock_when_mimo_call_fails(db_session, monkeypatch):
-    monkeypatch.setattr("app.services.model_router.settings.ADVANCED_LLM_PROVIDER", "mimo")
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_CRITICAL_PROVIDER", "mimo")
+    monkeypatch.setattr("app.services.model_router.settings.LLM_POLICY_CRITICAL_MODEL", "mimo-test-model")
     monkeypatch.setattr("app.llm.mimo_provider.settings.MIMO_API_KEY", "test-mimo-key")
     monkeypatch.setattr("app.llm.mimo_provider.settings.MIMO_MODEL", "mimo-test-model")
 
