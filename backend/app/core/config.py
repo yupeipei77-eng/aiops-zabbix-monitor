@@ -31,6 +31,20 @@ class Settings(BaseSettings):
     MIMO_MODEL: str = "mimo"
     MIMO_BASE_URL: Optional[str] = None
 
+    GATEWAY_API_KEY: Optional[str] = None
+    GATEWAY_BASE_URL: Optional[str] = None
+    GATEWAY_DEFAULT_MODEL: str = "deepseek-v4-flash"
+    GATEWAY_PROVIDER_NAME: str = "gateway"
+
+    LLM_POLICY_LOW_PROVIDER: str = "mock"
+    LLM_POLICY_LOW_MODEL: str = "mock"
+    LLM_POLICY_MEDIUM_PROVIDER: str = "mock"
+    LLM_POLICY_MEDIUM_MODEL: str = "mock"
+    LLM_POLICY_HIGH_PROVIDER: str = "mock"
+    LLM_POLICY_HIGH_MODEL: str = "mock"
+    LLM_POLICY_CRITICAL_PROVIDER: str = "mock"
+    LLM_POLICY_CRITICAL_MODEL: str = "mock"
+
     DEDUP_WINDOW_SECONDS: int = 300
     STORM_WINDOW_SECONDS: int = 600
     STORM_THRESHOLD: int = 50

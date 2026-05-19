@@ -32,7 +32,7 @@
 
 - `backend/app/api`：HTTP API 路由
 - `backend/app/services`：告警处理、AI 编排、风暴检测、报表和通知
-- `backend/app/llm`：LLM Provider 抽象层，支持 Mock、OpenAI、DeepSeek、Kimi、Mimo
+- `backend/app/llm`：LLM Provider 抽象层，支持 Mock、OpenAI、DeepSeek、Kimi、Mimo 和 OpenAI-compatible 中转站
 - `backend/app/models`：SQLAlchemy 数据模型
 - `backend/app/repositories`：数据访问层
 - `frontend/src/pages`：Dashboard、Alerts、Alert Detail、AI Analysis、Reports、Settings、Knowledge Base
@@ -108,12 +108,20 @@ make frontend-test # 构建前端
 | `MIMO_API_KEY` | Mimo API Key，留空时不会调用 Mimo | 空 |
 | `MIMO_BASE_URL` | Mimo OpenAI-compatible API 地址，留空使用 `https://api.mimo-v2.com/v1` | 空 |
 | `MIMO_MODEL` | Mimo 模型名 | `mimo` |
+| `GATEWAY_API_KEY` | OpenAI-compatible 中转站 API Key，留空时不可用 | 空 |
+| `GATEWAY_BASE_URL` | 中转站 API Base URL，例如 `https://gateway.example.com/v1` | 空 |
+| `GATEWAY_DEFAULT_MODEL` | 中转站默认模型 | `deepseek-v4-flash` |
+| `GATEWAY_PROVIDER_NAME` | 中转站用量记录里的 provider 名称 | `gateway` |
+| `LLM_POLICY_LOW_PROVIDER` / `LLM_POLICY_LOW_MODEL` | severity `0-2` 使用的 provider/model | `mock` / `mock` |
+| `LLM_POLICY_MEDIUM_PROVIDER` / `LLM_POLICY_MEDIUM_MODEL` | severity `3` 使用的 provider/model | `mock` / `mock` |
+| `LLM_POLICY_HIGH_PROVIDER` / `LLM_POLICY_HIGH_MODEL` | severity `4` 使用的 provider/model | `mock` / `mock` |
+| `LLM_POLICY_CRITICAL_PROVIDER` / `LLM_POLICY_CRITICAL_MODEL` | severity `5` 使用的 provider/model | `mock` / `mock` |
 | `DEDUP_WINDOW_SECONDS` | 重复告警去重窗口 | `300` |
 | `STORM_WINDOW_SECONDS` | 告警风暴统计窗口 | `600` |
 | `STORM_THRESHOLD` | 风暴阈值 | `50` |
 | `CORS_ORIGINS` | 允许访问后端的前端源 | `http://localhost:3000` |
 
-## 配置 DeepSeek
+## 配置 DeepSeek 原生 API
 
 默认配置如下，适合本地无 Key 验收：
 
@@ -128,27 +136,102 @@ DEEPSEEK_MODEL=deepseek-chat
 如果要让严重告警走 DeepSeek，把 `.env` 改为：
 
 ```env
-ADVANCED_LLM_PROVIDER=deepseek
 DEEPSEEK_API_KEY=你的 DeepSeek Key
 DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_MODEL=deepseek-v4-flash
+
+LLM_POLICY_HIGH_PROVIDER=deepseek
+LLM_POLICY_HIGH_MODEL=deepseek-v4-pro
+LLM_POLICY_CRITICAL_PROVIDER=deepseek
+LLM_POLICY_CRITICAL_MODEL=deepseek-v4-pro
 ```
 
 DeepSeek 调用失败时，`AIOrchestrator` 会记录一条 `success=false` 的 `llm_usage`，然后自动 fallback 到 `mock`，避免 Webhook 主链路因为模型异常而失败。
 
-## 配置 Mimo
+## 配置 Mimo 原生 API
 
 如果要让严重告警走 Mimo，把 `.env` 改为：
 
 ```env
-DEFAULT_LLM_PROVIDER=mock
-ADVANCED_LLM_PROVIDER=mimo
 MIMO_API_KEY=你的 Mimo Key
 MIMO_BASE_URL=你的 Mimo API Base URL
-MIMO_MODEL=你的 Mimo 模型名
+MIMO_MODEL=mimo-v2.5-pro
+
+LLM_POLICY_CRITICAL_PROVIDER=mimo
+LLM_POLICY_CRITICAL_MODEL=mimo-v2.5-pro
 ```
 
 `MimoProvider` 默认按 OpenAI-compatible Chat Completions 调用 `POST {MIMO_BASE_URL}/chat/completions`。如果 `MIMO_BASE_URL` 留空，默认使用 `https://api.mimo-v2.com/v1`。如果你的 Mimo 接口不是 OpenAI-compatible，需要按平台文档修改 `backend/app/llm/mimo_provider.py` 里的 `chat()` 请求格式。
+
+## 配置中转站 API
+
+如果你使用的是 OneAPI、LiteLLM、OpenRouter 或自建 OpenAI-compatible 中转站，可以配置 `gateway` provider：
+
+```env
+GATEWAY_API_KEY=你的中转站 Key
+GATEWAY_BASE_URL=https://gateway.example.com/v1
+GATEWAY_DEFAULT_MODEL=deepseek-v4-flash
+GATEWAY_PROVIDER_NAME=gateway
+```
+
+`OpenAICompatibleGatewayProvider` 会调用 `POST {GATEWAY_BASE_URL}/chat/completions`，请求体使用 `model`、`messages`、`temperature` 和 `response_format: {"type": "json_object"}`。中转站未配置 Key 或 Base URL 时不可用，路由器会自动 fallback 到 `mock`。
+
+## 按告警等级选择模型
+
+`ModelRouter` 现在按 severity 选择 provider + model：
+
+```env
+LLM_POLICY_LOW_PROVIDER=gateway
+LLM_POLICY_LOW_MODEL=deepseek-v4-flash
+
+LLM_POLICY_MEDIUM_PROVIDER=deepseek
+LLM_POLICY_MEDIUM_MODEL=deepseek-v4-flash
+
+LLM_POLICY_HIGH_PROVIDER=deepseek
+LLM_POLICY_HIGH_MODEL=deepseek-v4-pro
+
+LLM_POLICY_CRITICAL_PROVIDER=mimo
+LLM_POLICY_CRITICAL_MODEL=mimo-v2.5-pro
+```
+
+映射规则：
+
+- severity `0-2`：LOW
+- severity `3`：MEDIUM
+- severity `4`：HIGH
+- severity `5`：CRITICAL
+
+如果 `LLM_POLICY_*` 保持默认 `mock/mock`，旧配置 `DEFAULT_LLM_PROVIDER` / `ADVANCED_LLM_PROVIDER` 仍可兼容使用。无论是 DeepSeek、Mimo 还是中转站，调用失败都会记录 `llm_usage.success=false` 并 fallback 到 `mock`。
+
+## 手动指定 provider + model
+
+手动分析接口可以覆盖策略路由：
+
+```http
+POST /api/v1/ai/{alert_id}/analyze
+Content-Type: application/json
+
+{
+  "provider": "gateway",
+  "model": "deepseek-v4-flash"
+}
+```
+
+也可以直接指定原生 provider：
+
+```json
+{
+  "provider": "deepseek",
+  "model": "deepseek-v4-pro"
+}
+```
+
+```json
+{
+  "provider": "mimo",
+  "model": "mimo-v2.5-pro"
+}
+```
 
 ## 当前 MVP 行为
 

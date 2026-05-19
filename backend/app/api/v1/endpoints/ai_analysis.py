@@ -43,7 +43,11 @@ async def analyze_alert(
     db: AsyncSession = Depends(get_db),
 ):
     orchestrator = AIOrchestrator(db)
-    result = await orchestrator.analyze_alert(alert_id, preferred_provider=body.provider if body else None)
+    result = await orchestrator.analyze_alert(
+        alert_id,
+        preferred_provider=body.provider if body else None,
+        preferred_model=body.model if body else None,
+    )
     if not result["success"]:
         return ApiResponse(success=False, data=None, message=result["message"])
     return ApiResponse(data=result["data"])

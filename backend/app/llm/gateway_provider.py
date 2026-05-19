@@ -4,38 +4,38 @@ from typing import Any
 
 import httpx
 
-from app.llm.base import BaseLLMProvider
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.llm.base import BaseLLMProvider
 
 logger = get_logger(__name__)
 
 
-class OpenAIProvider(BaseLLMProvider):
+class OpenAICompatibleGatewayProvider(BaseLLMProvider):
     def __init__(
         self,
         model: str | None = None,
         transport: httpx.AsyncBaseTransport | None = None,
         timeout: float = 30.0,
     ):
-        self._model = model or settings.OPENAI_MODEL
+        self._model = model or settings.GATEWAY_DEFAULT_MODEL
         self._transport = transport
         self._timeout = timeout
 
     @property
     def name(self) -> str:
-        return "openai"
+        return settings.GATEWAY_PROVIDER_NAME or "gateway"
 
     @property
     def model(self) -> str:
         return self._model
 
     def is_available(self) -> bool:
-        return bool(settings.OPENAI_API_KEY)
+        return bool(settings.GATEWAY_API_KEY and settings.GATEWAY_BASE_URL)
 
     async def analyze_alert(self, prompt: str) -> dict[str, Any]:
         if not self.is_available():
-            raise RuntimeError("OpenAI API key not configured")
+            raise RuntimeError("Gateway API key or base URL not configured")
         content = await self.chat([
             {
                 "role": "system",
@@ -51,8 +51,8 @@ class OpenAIProvider(BaseLLMProvider):
 
     async def chat(self, messages: list[dict]) -> str:
         if not self.is_available():
-            raise RuntimeError("OpenAI API key not configured")
-        base_url = (settings.OPENAI_BASE_URL or "https://api.openai.com/v1").rstrip("/")
+            raise RuntimeError("Gateway API key or base URL not configured")
+        base_url = settings.GATEWAY_BASE_URL.rstrip("/")
         async with httpx.AsyncClient(
             base_url=base_url,
             timeout=self._timeout,
@@ -61,7 +61,7 @@ class OpenAIProvider(BaseLLMProvider):
             response = await client.post(
                 "/chat/completions",
                 headers={
-                    "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+                    "Authorization": f"Bearer {settings.GATEWAY_API_KEY}",
                     "Content-Type": "application/json",
                 },
                 json={
@@ -76,7 +76,7 @@ class OpenAIProvider(BaseLLMProvider):
         try:
             return payload["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:
-            raise RuntimeError("OpenAI response missing choices[0].message.content") from exc
+            raise RuntimeError("Gateway response missing choices[0].message.content") from exc
 
     async def health_check(self) -> bool:
         return self.is_available()
@@ -89,7 +89,7 @@ class OpenAIProvider(BaseLLMProvider):
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
-            logger.warning("OpenAI returned non-JSON content; wrapping as summary")
+            logger.warning("Gateway returned non-JSON content; wrapping as summary")
             data = {"summary": raw}
 
         causes = data.get("possible_causes") or []
@@ -110,7 +110,7 @@ class OpenAIProvider(BaseLLMProvider):
         confidence = min(max(confidence, 0.0), 1.0)
 
         return {
-            "summary": str(data.get("summary") or "OpenAI completed analysis but did not provide a summary."),
+            "summary": str(data.get("summary") or "Gateway completed analysis but did not provide a summary."),
             "possible_causes": [str(item) for item in causes],
             "suggested_actions": [str(item) for item in actions],
             "risk_level": risk_level,

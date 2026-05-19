@@ -12,7 +12,13 @@ logger = get_logger(__name__)
 
 
 class DeepSeekProvider(BaseLLMProvider):
-    def __init__(self, transport: httpx.AsyncBaseTransport | None = None, timeout: float = 30.0):
+    def __init__(
+        self,
+        model: str | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
+        timeout: float = 30.0,
+    ):
+        self._model = model or settings.DEEPSEEK_MODEL
         self._transport = transport
         self._timeout = timeout
 
@@ -22,7 +28,7 @@ class DeepSeekProvider(BaseLLMProvider):
 
     @property
     def model(self) -> str:
-        return settings.DEEPSEEK_MODEL
+        return self._model
 
     def is_available(self) -> bool:
         return bool(settings.DEEPSEEK_API_KEY)
@@ -56,7 +62,7 @@ class DeepSeekProvider(BaseLLMProvider):
                 "/chat/completions",
                 headers={"Authorization": f"Bearer {settings.DEEPSEEK_API_KEY}"},
                 json={
-                    "model": settings.DEEPSEEK_MODEL,
+                    "model": self.model,
                     "messages": messages,
                     "temperature": 0.2,
                     "response_format": {"type": "json_object"},

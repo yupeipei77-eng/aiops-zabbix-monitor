@@ -18,7 +18,12 @@ class AIOrchestrator:
         self.analysis_repo = AIAnalysisRepo(db)
         self.usage_repo = UsageRepo(db)
 
-    async def analyze_alert(self, alert_id: int, preferred_provider: str | None = None) -> dict:
+    async def analyze_alert(
+        self,
+        alert_id: int,
+        preferred_provider: str | None = None,
+        preferred_model: str | None = None,
+    ) -> dict:
         alert = await self.alert_repo.get_by_id(alert_id)
         if not alert:
             return {"success": False, "data": None, "message": "Alert not found"}
@@ -35,7 +40,7 @@ class AIOrchestrator:
 
         prompt = PromptBuilder.build_alert_analysis_prompt(alert_data)
 
-        provider, fallback_reason = ModelRouter.get_provider(alert.severity, preferred_provider)
+        provider, fallback_reason = ModelRouter.get_provider(alert.severity, preferred_provider, preferred_model)
 
         return await self._analyze_with_provider(provider, alert_id, prompt, fallback_reason)
 

@@ -2,9 +2,16 @@ from app.llm.base import BaseLLMProvider
 
 
 class MockLLMProvider(BaseLLMProvider):
+    def __init__(self, model: str | None = None):
+        self._model = model or "mock"
+
     @property
     def name(self) -> str:
         return "mock"
+
+    @property
+    def model(self) -> str:
+        return self._model
 
     def is_available(self) -> bool:
         return True

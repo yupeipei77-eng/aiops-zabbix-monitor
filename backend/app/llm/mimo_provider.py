@@ -12,7 +12,13 @@ logger = get_logger(__name__)
 
 
 class MimoProvider(BaseLLMProvider):
-    def __init__(self, transport: httpx.AsyncBaseTransport | None = None, timeout: float = 30.0):
+    def __init__(
+        self,
+        model: str | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
+        timeout: float = 30.0,
+    ):
+        self._model = model or settings.MIMO_MODEL
         self._transport = transport
         self._timeout = timeout
 
@@ -22,7 +28,7 @@ class MimoProvider(BaseLLMProvider):
 
     @property
     def model(self) -> str:
-        return settings.MIMO_MODEL
+        return self._model
 
     def is_available(self) -> bool:
         return bool(settings.MIMO_API_KEY)
@@ -59,7 +65,7 @@ class MimoProvider(BaseLLMProvider):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": settings.MIMO_MODEL,
+                    "model": self.model,
                     "messages": messages,
                     "temperature": 0.2,
                     "response_format": {"type": "json_object"},
