@@ -1,6 +1,6 @@
 """initial schema
 
-Revision ID: 001
+Revision ID: 0001
 Revises: None
 Create Date: 2025-01-01
 """
@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision: str = "001"
+revision: str = "0001"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -83,6 +83,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_index("ix_llm_usage_created_at", "llm_usage", ["created_at"])
 
     op.create_table(
         "knowledge_documents",
