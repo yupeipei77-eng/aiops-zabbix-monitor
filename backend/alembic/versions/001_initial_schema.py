@@ -37,8 +37,8 @@ def upgrade() -> None:
         sa.Column("dedup_key", sa.String(200), server_default=""),
         sa.Column("dedup_count", sa.Integer(), server_default="1"),
         sa.Column("storm_detected", sa.Boolean(), server_default="false"),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_alerts_event_id", "alerts", ["event_id"])
@@ -60,8 +60,8 @@ def upgrade() -> None:
         sa.Column("prompt", sa.Text(), server_default=""),
         sa.Column("raw_response", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'{}'::jsonb")),
         sa.Column("latency_ms", sa.Integer(), server_default="0"),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_ai_analyses_alert_id", "ai_analyses", ["alert_id"])
@@ -79,8 +79,8 @@ def upgrade() -> None:
         sa.Column("success", sa.Boolean(), server_default="true"),
         sa.Column("error_message", sa.Text(), server_default=""),
         sa.Column("cached", sa.Boolean(), server_default="false"),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.PrimaryKeyConstraint("id"),
     )
 
@@ -91,8 +91,8 @@ def upgrade() -> None:
         sa.Column("source", sa.String(200), server_default="manual"),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("tags", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'[]'::jsonb")),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.PrimaryKeyConstraint("id"),
     )
 
@@ -106,8 +106,8 @@ def upgrade() -> None:
         sa.Column("status", sa.String(20), server_default="draft"),
         sa.Column("steps", postgresql.JSONB(astext_type=sa.Text()), server_default=sa.text("'[]'::jsonb")),
         sa.Column("dry_run", sa.Boolean(), server_default="true"),
-        sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_remediation_plans_alert_id", "remediation_plans", ["alert_id"])
