@@ -14,6 +14,18 @@ WEBHOOK_API_KEY="${WEBHOOK_API_KEY:-changeme-webhook-api-key}"
 BASE_URL="${BASE_URL:-http://localhost:8000}"
 PAYLOAD_FILE="${PROJECT_DIR}/mock/zabbix_real_payload_example.json"
 
+mask_api_key() {
+    local key="$1"
+    local len=${#key}
+    if [ "${len}" -gt 8 ]; then
+        echo "${key:0:4}****${key: -4}"
+    else
+        echo "****"
+    fi
+}
+
+API_KEY_DISPLAY=$(mask_api_key "${WEBHOOK_API_KEY}")
+
 WEBHOOK_URL="${BASE_URL}/api/v1/webhooks/zabbix"
 HEALTH_URL="${BASE_URL}/api/v1/health"
 ALERTS_URL="${BASE_URL}/api/v1/alerts"
@@ -23,6 +35,7 @@ echo ""
 echo "Project dir : ${PROJECT_DIR}"
 echo "Backend URL : ${BASE_URL}"
 echo "Payload     : ${PAYLOAD_FILE}"
+echo "API Key     : ${API_KEY_DISPLAY}"
 echo ""
 
 echo "=== Step 1: Health Check ==="
