@@ -105,6 +105,9 @@ make frontend-test # 构建前端
 | `DEEPSEEK_API_KEY` | DeepSeek API Key，留空时不会调用 DeepSeek | 空 |
 | `DEEPSEEK_BASE_URL` | DeepSeek OpenAI-compatible API 地址，留空使用 `https://api.deepseek.com` | 空 |
 | `DEEPSEEK_MODEL` | DeepSeek 模型名 | `deepseek-chat` |
+| `MIMO_API_KEY` | Mimo API Key，留空时不会调用 Mimo | 空 |
+| `MIMO_BASE_URL` | Mimo OpenAI-compatible API 地址，留空使用 `https://api.mimo-v2.com/v1` | 空 |
+| `MIMO_MODEL` | Mimo 模型名 | `mimo` |
 | `DEDUP_WINDOW_SECONDS` | 重复告警去重窗口 | `300` |
 | `STORM_WINDOW_SECONDS` | 告警风暴统计窗口 | `600` |
 | `STORM_THRESHOLD` | 风暴阈值 | `50` |
@@ -132,6 +135,20 @@ DEEPSEEK_MODEL=deepseek-chat
 ```
 
 DeepSeek 调用失败时，`AIOrchestrator` 会记录一条 `success=false` 的 `llm_usage`，然后自动 fallback 到 `mock`，避免 Webhook 主链路因为模型异常而失败。
+
+## 配置 Mimo
+
+如果要让严重告警走 Mimo，把 `.env` 改为：
+
+```env
+DEFAULT_LLM_PROVIDER=mock
+ADVANCED_LLM_PROVIDER=mimo
+MIMO_API_KEY=你的 Mimo Key
+MIMO_BASE_URL=你的 Mimo API Base URL
+MIMO_MODEL=你的 Mimo 模型名
+```
+
+`MimoProvider` 默认按 OpenAI-compatible Chat Completions 调用 `POST {MIMO_BASE_URL}/chat/completions`。如果 `MIMO_BASE_URL` 留空，默认使用 `https://api.mimo-v2.com/v1`。如果你的 Mimo 接口不是 OpenAI-compatible，需要按平台文档修改 `backend/app/llm/mimo_provider.py` 里的 `chat()` 请求格式。
 
 ## 当前 MVP 行为
 
