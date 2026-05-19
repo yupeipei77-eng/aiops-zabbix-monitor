@@ -343,6 +343,64 @@ Content-Type: application/json
 - 默认 LLM provider 为 `mock`；真实 provider 未配置 API Key 时自动 fallback 到 mock。
 - 知识库当前只做文档保存与列表展示，暂不做向量检索。
 
+## 真实 Zabbix 接入
+
+项目已具备与生产 Zabbix Server 联调的条件。在 Zabbix 管理界面中创建 Webhook Media Type，将告警 Action 路由到本平台的 `/api/v1/webhooks/zabbix` 接口即可。
+
+### 快速验证
+
+```bash
+# 1. 确认后端已启动
+docker compose up -d
+
+# 2. 使用真实 payload 测试脚本（自动读取 .env 中的 WEBHOOK_API_KEY）
+./scripts/test_zabbix_webhook.sh
+
+# 3. 或手动 curl 发送
+curl -X POST http://localhost:8000/api/v1/webhooks/zabbix \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: changeme-webhook-api-key" \
+  -d @mock/zabbix_real_payload_example.json
+```
+
+### Zabbix Media Type Script（最小版）
+
+```javascript
+var request = new HttpRequest();
+request.addHeader('Content-Type: application/json');
+request.addHeader('X-API-Key: ' + params.api_key);
+
+var payload = {
+    event_id: event.id,
+    trigger_id: event.triggerId,
+    trigger_name: event.name,
+    host_id: event.tags.host_id || '',
+    host_name: event.host.name,
+    host_ip: event.host.ip,
+    severity: event.severity,
+    item_key: event.item.key,
+    item_value: event.item.value,
+    event_time: event.time,
+    tags: event.tags,
+    raw_payload: event
+};
+
+var resp = request.post(params.webhook_url, JSON.stringify(payload));
+return resp;
+```
+
+### 相关文档与脚本
+
+| 文件 | 用途 |
+|------|------|
+| `docs/ZABBIX_REAL_INTEGRATION.md` | 完整联调指南（Media Type 配置、Action 触发条件、错误排查） |
+| `docs/ZABBIX_WEBHOOK_EXAMPLE.md` | Webhook 配置快速参考 |
+| `mock/zabbix_real_payload_example.json` | 模拟真实 Zabbix Webhook Payload |
+| `scripts/test_zabbix_webhook.sh` | 本地 Webhook 联调测试脚本 |
+| `mock/webhook_test.sh` | 批量 Mock Payload 测试（通过 `make webhook-test` 调用） |
+
+详细的 Zabbix Server 端配置、Action 规则、Header 安全设置、Severity 映射和常见错误排查见 [真实 Zabbix 联调指南](docs/ZABBIX_REAL_INTEGRATION.md)。
+
 ## 本地验收命令
 
 完整 Docker Compose 验收：

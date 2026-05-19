@@ -28,3 +28,6 @@ seed:
 
 webhook-test:
 	./mock/webhook_test.sh
+
+webhook-real-test:
+	./scripts/test_zabbix_webhook.sh

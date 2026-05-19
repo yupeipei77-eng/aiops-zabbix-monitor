@@ -1,0 +1,30 @@
+{
+  "event_id": "1847293",
+  "trigger_id": "23157",
+  "trigger_name": "High CPU utilization on web-server-01 (95%)",
+  "host_id": "10432",
+  "host_name": "web-server-01",
+  "host_ip": "10.0.1.15",
+  "severity": "4",
+  "item_key": "system.cpu.util[,idle]",
+  "item_value": "95.2",
+  "event_time": "2025-01-15T14:30:22+08:00",
+  "event_value": "1",
+  "status": "PROBLEM",
+  "tags": {
+    "scope": "production",
+    "service": "web",
+    "env": "prod",
+    "team": "infra"
+  },
+  "raw_payload": {
+    "zabbix_version": "6.4",
+    "trigger_expression": "{web-server-01:system.cpu.util[,idle].last(#1)}>90",
+    "trigger_description": "CPU utilization exceeds 90% for 5 consecutive minutes",
+    "event_source": "0",
+    "event_object": "0",
+    "trigger_priority": "4",
+    "trigger_status": "0",
+    "host_groups": ["Production Servers", "Linux Servers"]
+  }
+}
