@@ -352,3 +352,33 @@ def test_model_router_can_get_mimo_plan_provider(monkeypatch):
     assert fallback_reason == ""
     assert provider.name == "mimo_plan"
     assert provider.model == "mimo-plan-pro"
+
+
+@pytest.mark.asyncio
+async def test_mimo_plan_provider_chat_parses_steps_array(monkeypatch):
+    monkeypatch.setattr("app.llm.mimo_plan_provider.settings.MIMO_PLAN_API_KEY", "test-key")
+    monkeypatch.setattr("app.llm.mimo_plan_provider.settings.MIMO_PLAN_BASE_URL", "https://plan.test")
+    monkeypatch.setattr("app.llm.mimo_plan_provider.settings.MIMO_PLAN_ENDPOINT", "/plan")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"steps": ["检查主机状态", "查看接口流量", "确认链路状态"]})
+
+    provider = MimoPlanProvider(transport=httpx.MockTransport(handler))
+    result = await provider.chat([{"role": "user", "content": "测试告警"}])
+
+    assert result == "检查主机状态\n查看接口流量\n确认链路状态"
+
+
+@pytest.mark.asyncio
+async def test_mimo_plan_provider_chat_parses_plan_field(monkeypatch):
+    monkeypatch.setattr("app.llm.mimo_plan_provider.settings.MIMO_PLAN_API_KEY", "test-key")
+    monkeypatch.setattr("app.llm.mimo_plan_provider.settings.MIMO_PLAN_BASE_URL", "https://plan.test")
+    monkeypatch.setattr("app.llm.mimo_plan_provider.settings.MIMO_PLAN_ENDPOINT", "/plan")
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"plan": "第一步：检查配置\n第二步：重启服务"})
+
+    provider = MimoPlanProvider(transport=httpx.MockTransport(handler))
+    result = await provider.chat([{"role": "user", "content": "测试告警"}])
+
+    assert result == "第一步：检查配置\n第二步：重启服务"

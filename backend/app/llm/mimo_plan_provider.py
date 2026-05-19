@@ -43,7 +43,13 @@ class MimoPlanProvider(BaseLLMProvider):
         if not self.is_available():
             raise RuntimeError("Mimo Plan API key or base URL not configured")
         user_prompt = messages[-1].get("content", "") if messages else ""
-        return await self._call_plan_api(user_prompt)
+        payload = await self._call_plan_api(user_prompt)
+        content = self._extract_content(payload)
+        if isinstance(content, list):
+            return "\n".join(str(item) for item in content)
+        if isinstance(content, str):
+            return content
+        raise RuntimeError("Mimo Plan response has no usable content")
 
     async def health_check(self) -> bool:
         return self.is_available()
