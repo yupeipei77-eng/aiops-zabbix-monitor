@@ -31,17 +31,25 @@ async def receive_zabbix_webhook(
         normalized["storm_detected"] = True
 
     alert_repo = AlertRepo(db)
-    alert = await alert_repo.create(**normalized)
-
     is_dup, count = await deduplicator.check_and_record(normalized["dedup_key"])
     if is_dup:
+        alert = await alert_repo.get_original_by_dedup_key(normalized["dedup_key"])
+        if not alert:
+            alert = await alert_repo.create(**normalized)
         await alert_repo.update_dedup_count(alert.id, count)
         logger.info("Duplicate alert: dedup_key=%s, count=%d", normalized["dedup_key"], count)
         return ApiResponse(
             success=True,
-            data={"alert_id": alert.id, "is_duplicate": True, "dedup_count": count},
+            data={
+                "alert_id": alert.id,
+                "is_duplicate": True,
+                "dedup_count": count,
+                "storm_detected": bool(alert.storm_detected),
+            },
             message="Duplicate alert recorded",
         )
+
+    alert = await alert_repo.create(**normalized)
 
     if not is_storm:
         orchestrator = AIOrchestrator(db)

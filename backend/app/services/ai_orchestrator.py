@@ -1,5 +1,6 @@
 import time
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.llm.mock_provider import MockLLMProvider
 from app.services.model_router import ModelRouter
 from app.services.prompt_builder import PromptBuilder
 from app.repositories.alert_repo import AlertRepo
@@ -36,6 +37,10 @@ class AIOrchestrator:
 
         provider, fallback_reason = ModelRouter.get_provider(alert.severity, preferred_provider)
 
+        return await self._analyze_with_provider(provider, alert_id, prompt, fallback_reason)
+
+    async def _analyze_with_provider(self, provider, alert_id: int, prompt: str, fallback_reason: str) -> dict:
+        model_name = getattr(provider, "model", provider.name)
         start = time.time()
         try:
             result = await provider.analyze_alert(prompt)
@@ -57,7 +62,7 @@ class AIOrchestrator:
 
             await self.usage_repo.create(
                 provider=provider.name,
-                model=provider.name,
+                model=model_name,
                 context="alert_analysis",
                 prompt_tokens=0,
                 completion_tokens=0,
@@ -88,7 +93,7 @@ class AIOrchestrator:
             logger.error("AI analysis failed: %s", str(e))
             await self.usage_repo.create(
                 provider=provider.name,
-                model=provider.name,
+                model=model_name,
                 context="alert_analysis",
                 prompt_tokens=0,
                 completion_tokens=0,
@@ -97,4 +102,7 @@ class AIOrchestrator:
                 success=False,
                 error_message=str(e),
             )
+            if provider.name != "mock":
+                mock_fallback_reason = f"{fallback_reason}; provider '{provider.name}' failed: {e}".strip("; ")
+                return await self._analyze_with_provider(MockLLMProvider(), alert_id, prompt, mock_fallback_reason)
             return {"success": False, "data": None, "message": str(e)}

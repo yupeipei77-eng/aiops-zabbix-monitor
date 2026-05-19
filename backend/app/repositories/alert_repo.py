@@ -12,6 +12,12 @@ class AlertRepo:
         result = await self.db.execute(select(Alert).where(Alert.id == alert_id))
         return result.scalars().first()
 
+    async def get_original_by_dedup_key(self, dedup_key: str) -> Alert | None:
+        result = await self.db.execute(
+            select(Alert).where(Alert.dedup_key == dedup_key).order_by(Alert.created_at.asc()).limit(1)
+        )
+        return result.scalars().first()
+
     async def get_list(self, params: AlertListParams) -> tuple[list[Alert], int]:
         query = select(Alert)
         count_query = select(func.count(Alert.id))

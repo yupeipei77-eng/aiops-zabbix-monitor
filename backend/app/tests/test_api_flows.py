@@ -106,8 +106,14 @@ async def test_duplicate_webhook_updates_count_without_new_analysis(client, db_s
     assert second.status_code == 200
     assert second.json()["data"]["is_duplicate"] is True
     assert second.json()["data"]["dedup_count"] == 2
+    assert second.json()["data"]["alert_id"] == first.json()["data"]["alert_id"]
 
+    alert = (await db_session.execute(select(Alert))).scalars().one()
+    alert_count = await db_session.scalar(select(func.count(Alert.id)))
     analysis_count = await db_session.scalar(select(func.count(AIAnalysis.id)))
+    assert alert.dedup_count == 2
+    assert alert.updated_at >= alert.created_at
+    assert alert_count == 1
     assert analysis_count == 1
 
 
@@ -142,6 +148,7 @@ async def test_alert_list_detail_manual_analyze_and_usage(client, db_session, fa
     detail_response = await client.get(f"/api/v1/alerts/{alert_id}")
     analysis_detail_response = await client.get(f"/api/v1/ai/alerts/{alert_id}")
     analyze_response = await client.post(f"/api/v1/ai/{alert_id}/analyze", json={})
+    analysis_list_response = await client.get("/api/v1/ai")
     usage_response = await client.get("/api/v1/llm")
 
     assert list_response.status_code == 200
@@ -149,6 +156,8 @@ async def test_alert_list_detail_manual_analyze_and_usage(client, db_session, fa
     assert detail_response.json()["data"]["id"] == alert_id
     assert analysis_detail_response.json()["data"]["alert_id"] == alert_id
     assert analyze_response.json()["success"] is True
+    assert analysis_list_response.status_code == 200
+    assert analysis_list_response.json()["total"] == 2
     assert usage_response.json()["total"] == 2
 
 

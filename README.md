@@ -48,6 +48,8 @@
 
 ## 快速启动
 
+当前 MVP 默认使用 `mock` LLM Provider，不需要配置任何真实模型 Key 就能跑通 Webhook、入库、Mock AI 分析和前端展示。
+
 ```bash
 cp .env.example .env
 make build
@@ -100,19 +102,73 @@ make frontend-test # 构建前端
 | `WEBHOOK_API_KEY` | Zabbix Webhook 验证 Key | `changeme-webhook-api-key` |
 | `DEFAULT_LLM_PROVIDER` | 默认 LLM 提供商 | `mock` |
 | `ADVANCED_LLM_PROVIDER` | 高级 LLM 提供商 | `mock` |
+| `DEEPSEEK_API_KEY` | DeepSeek API Key，留空时不会调用 DeepSeek | 空 |
+| `DEEPSEEK_BASE_URL` | DeepSeek OpenAI-compatible API 地址，留空使用 `https://api.deepseek.com` | 空 |
+| `DEEPSEEK_MODEL` | DeepSeek 模型名 | `deepseek-chat` |
 | `DEDUP_WINDOW_SECONDS` | 重复告警去重窗口 | `300` |
 | `STORM_WINDOW_SECONDS` | 告警风暴统计窗口 | `600` |
 | `STORM_THRESHOLD` | 风暴阈值 | `50` |
 | `CORS_ORIGINS` | 允许访问后端的前端源 | `http://localhost:3000` |
+
+## 配置 DeepSeek
+
+默认配置如下，适合本地无 Key 验收：
+
+```env
+DEFAULT_LLM_PROVIDER=mock
+ADVANCED_LLM_PROVIDER=mock
+DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=
+DEEPSEEK_MODEL=deepseek-chat
+```
+
+如果要让严重告警走 DeepSeek，把 `.env` 改为：
+
+```env
+ADVANCED_LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=你的 DeepSeek Key
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-chat
+```
+
+DeepSeek 调用失败时，`AIOrchestrator` 会记录一条 `success=false` 的 `llm_usage`，然后自动 fallback 到 `mock`，避免 Webhook 主链路因为模型异常而失败。
 
 ## 当前 MVP 行为
 
 - Webhook 使用 `X-API-Key` 校验，缺失或错误返回统一 `401` 响应。
 - Zabbix severity 会标准化为 `0-5`，支持 `Disaster`、`High`、`Average`、`Warning`、`Information`、`Not classified`。
 - 去重 key 为 `zabbix:{host_id}:{trigger_id}:{item_key}`，Redis key 为 `aiops:dedup:{dedup_key}`，value 记录 `count`、`first_seen`、`last_seen`。
+- 重复告警不会新增 `alerts` 行，只更新原告警的 `dedup_count` 和 `updated_at`，也不会重复触发 AI。
 - 10 分钟内超过阈值后进入 storm 模式，Webhook 仍入库，但跳过逐条 AI 分析并标记 `storm_detected=true`。
 - 默认 LLM provider 为 `mock`；真实 provider 未配置 API Key 时自动 fallback 到 mock。
 - 知识库当前只做文档保存与列表展示，暂不做向量检索。
+
+## 本地验收命令
+
+完整 Docker Compose 验收：
+
+```bash
+cp .env.example .env
+docker compose config
+make build
+make up
+make migrate
+make seed
+make webhook-test
+make test
+```
+
+不依赖 Docker 的快速开发验收：
+
+```bash
+cd backend
+uv sync --extra dev
+uv run pytest -q
+
+cd ../frontend
+npm ci
+npm run build
+```
 
 ## 目录结构
 
