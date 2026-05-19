@@ -133,3 +133,43 @@ jobs:
 
       - name: Validate compose file
         run: docker compose config
+
+  acceptance:
+    name: Local acceptance commands
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare env
+        run: cp .env.example .env
+
+      - name: Validate compose file
+        run: docker compose config
+
+      - name: Build services
+        run: make build
+
+      - name: Start services
+        run: make up
+
+      - name: Run migrations
+        run: make migrate
+
+      - name: Seed data
+        run: make seed
+
+      - name: Run webhook smoke test
+        run: make webhook-test
+
+      - name: Run full test target
+        run: make test
+
+      - name: Show Docker logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Stop services
+        if: always()
+        run: make down
