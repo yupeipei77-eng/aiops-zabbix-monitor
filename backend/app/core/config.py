@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     MIMO_MODEL: str = "mimo"
     MIMO_BASE_URL: Optional[str] = None
 
+    MIMO_PLAN_API_KEY: Optional[str] = None
+    MIMO_PLAN_BASE_URL: Optional[str] = None
+    MIMO_PLAN_MODEL: str = "mimo-plan"
+    MIMO_PLAN_ENDPOINT: str = "/plan"
+
     GATEWAY_API_KEY: Optional[str] = None
     GATEWAY_BASE_URL: Optional[str] = None
     GATEWAY_DEFAULT_MODEL: str = "deepseek-v4-flash"

@@ -4,6 +4,7 @@ from app.llm.deepseek_provider import DeepSeekProvider
 from app.llm.gateway_provider import OpenAICompatibleGatewayProvider
 from app.llm.kimi_provider import KimiProvider
 from app.llm.mimo_provider import MimoProvider
+from app.llm.mimo_plan_provider import MimoPlanProvider
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.llm.base import BaseLLMProvider
@@ -17,6 +18,7 @@ PROVIDER_REGISTRY: dict[str, type[BaseLLMProvider]] = {
     "gateway": OpenAICompatibleGatewayProvider,
     "kimi": KimiProvider,
     "mimo": MimoProvider,
+    "mimo_plan": MimoPlanProvider,
 }
 
 

@@ -110,6 +110,10 @@ make frontend-test # 构建前端
 | `MIMO_API_KEY` | Mimo API Key，留空时不会调用 Mimo | 空 |
 | `MIMO_BASE_URL` | Mimo OpenAI-compatible API 地址，留空使用 `https://api.mimo-v2.com/v1` | 空 |
 | `MIMO_MODEL` | Mimo 模型名 | `mimo` |
+| `MIMO_PLAN_API_KEY` | Mimo Plan API Key，留空时不会调用 mimo_plan | 空 |
+| `MIMO_PLAN_BASE_URL` | Mimo Plan API Base URL | 空 |
+| `MIMO_PLAN_MODEL` | Mimo Plan 模型名 | `mimo-plan` |
+| `MIMO_PLAN_ENDPOINT` | Mimo Plan API 路径 | `/plan` |
 | `GATEWAY_API_KEY` | OpenAI-compatible 中转站 API Key，留空时不可用 | 空 |
 | `GATEWAY_BASE_URL` | 中转站 API Base URL，例如 `https://gateway.example.com/v1` | 空 |
 | `GATEWAY_DEFAULT_MODEL` | 中转站默认模型 | `deepseek-v4-flash` |
@@ -215,6 +219,42 @@ LLM_POLICY_CRITICAL_ENABLED=true
 ```
 
 `MimoProvider` 默认按 OpenAI-compatible Chat Completions 调用 `POST {MIMO_BASE_URL}/chat/completions`。如果 `MIMO_BASE_URL` 留空，默认使用 `https://api.mimo-v2.com/v1`。如果你的 Mimo 接口不是 OpenAI-compatible，需要按平台文档修改 `backend/app/llm/mimo_provider.py` 里的 `chat()` 请求格式。
+
+## 配置 Mimo Plan API
+
+**MimoProvider** 用于 OpenAI-compatible chat/completions 告警分析。
+
+**MimoPlanProvider** 用于 Mimo Plan API / Agent Plan / 排障计划类接口。
+
+如果 Mimo API 返回结构是 `choices[0].message.content`，可以使用 MimoProvider。
+
+如果 Mimo Plan API 返回 `plan` / `result` / `output` / `steps` / `data.plan` / `data.result` / `data.steps`，应使用 mimo_plan provider。
+
+配置示例：
+
+```env
+MIMO_PLAN_API_KEY=你的MimoPlanKey
+MIMO_PLAN_BASE_URL=https://你的-mimo-plan-api地址
+MIMO_PLAN_MODEL=mimo-plan-pro
+MIMO_PLAN_ENDPOINT=/plan
+
+LLM_POLICY_CRITICAL_ENABLED=true
+LLM_POLICY_CRITICAL_PROVIDER=mimo_plan
+LLM_POLICY_CRITICAL_MODEL=mimo-plan-pro
+```
+
+手动分析示例：
+
+```http
+POST /api/v1/ai/{alert_id}/analyze
+Content-Type: application/json
+
+{
+  "provider": "mimo_plan",
+  "model": "mimo-plan-pro",
+  "force": true
+}
+```
 
 ## 配置中转站 API
 
