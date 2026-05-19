@@ -9,6 +9,7 @@ from app.db.session import engine
 
 
 async def init_db() -> None:
+    """Development fallback only; production setup must use Alembic migrations."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -26,6 +27,7 @@ async def seed_mock_data() -> None:
 
         from datetime import datetime, timezone
 
+        now = datetime.now(timezone.utc)
         alerts_data = [
             {
                 "source": "zabbix",
@@ -43,11 +45,11 @@ async def seed_mock_data() -> None:
                 "tags": {"scope": "production", "team": "infra"},
                 "raw_payload": {"event_id": "evt-001"},
                 "is_recovery": False,
-                "dedup_key": "zabbix:trg-001:host-001",
+                "dedup_key": "zabbix:host-001:trg-001:system.cpu.util",
                 "dedup_count": 1,
                 "storm_detected": False,
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
+                "created_at": now,
+                "updated_at": now,
             },
             {
                 "source": "zabbix",
@@ -65,11 +67,11 @@ async def seed_mock_data() -> None:
                 "tags": {"scope": "production", "team": "dba"},
                 "raw_payload": {"event_id": "evt-002"},
                 "is_recovery": False,
-                "dedup_key": "zabbix:trg-002:host-002",
+                "dedup_key": "zabbix:host-002:trg-002:vfs.fs.size[/,pfree]",
                 "dedup_count": 1,
                 "storm_detected": False,
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
+                "created_at": now,
+                "updated_at": now,
             },
             {
                 "source": "zabbix",
@@ -87,25 +89,27 @@ async def seed_mock_data() -> None:
                 "tags": {"scope": "production", "team": "network"},
                 "raw_payload": {"event_id": "evt-003"},
                 "is_recovery": False,
-                "dedup_key": "zabbix:trg-003:host-003",
+                "dedup_key": "zabbix:host-003:trg-003:net.if.status[eth0]",
                 "dedup_count": 1,
                 "storm_detected": False,
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
+                "created_at": now,
+                "updated_at": now,
             },
         ]
 
+        alerts: list[Alert] = []
         for data in alerts_data:
             alert = Alert(**data)
             session.add(alert)
+            alerts.append(alert)
 
-        await session.commit()
+        await session.flush()
         logger.info("Seeded %d mock alerts", len(alerts_data))
 
         from app.models.ai_analysis import AIAnalysis
         analyses_data = [
             {
-                "alert_id": 1,
+                "alert_id": alerts[0].id,
                 "summary": "CPU 使用率持续超过 90%，可能存在进程异常或资源不足",
                 "possible_causes": ["业务流量突增", "存在 CPU 密集型进程", "应用程序内存泄漏导致频繁 GC"],
                 "suggested_actions": ["检查 top/htop 中 CPU 占用最高的进程", "查看近期流量变化趋势", "考虑水平扩容或优化代码性能"],
@@ -116,10 +120,11 @@ async def seed_mock_data() -> None:
                 "prompt": "mock prompt",
                 "raw_response": {"summary": "mock response"},
                 "latency_ms": 10,
-                "created_at": datetime.now(timezone.utc),
+                "created_at": now,
+                "updated_at": now,
             },
             {
-                "alert_id": 2,
+                "alert_id": alerts[1].id,
                 "summary": "磁盘剩余空间不足 10%，需要及时清理或扩容",
                 "possible_causes": ["日志文件过大", "临时文件未清理", "数据增长超出预期"],
                 "suggested_actions": ["查找大文件并清理", "配置日志轮转策略", "评估扩容磁盘容量"],
@@ -130,10 +135,11 @@ async def seed_mock_data() -> None:
                 "prompt": "mock prompt",
                 "raw_response": {"summary": "mock response"},
                 "latency_ms": 8,
-                "created_at": datetime.now(timezone.utc),
+                "created_at": now,
+                "updated_at": now,
             },
             {
-                "alert_id": 3,
+                "alert_id": alerts[2].id,
                 "summary": "核心路由器接口宕机，影响范围较大，需紧急处理",
                 "possible_causes": ["物理链路故障", "交换机端口故障", "配置变更导致接口 down"],
                 "suggested_actions": ["检查物理连接和指示灯状态", "登录设备查看接口日志", "联系网络团队进行应急处理"],
@@ -144,7 +150,8 @@ async def seed_mock_data() -> None:
                 "prompt": "mock prompt",
                 "raw_response": {"summary": "mock response"},
                 "latency_ms": 12,
-                "created_at": datetime.now(timezone.utc),
+                "created_at": now,
+                "updated_at": now,
             },
         ]
 
@@ -160,5 +167,4 @@ if __name__ == "__main__":
     import asyncio
     from app.core.logging import setup_logging
     setup_logging()
-    asyncio.run(init_db())
     asyncio.run(seed_mock_data())

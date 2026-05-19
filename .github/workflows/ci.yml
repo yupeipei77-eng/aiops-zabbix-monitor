@@ -29,6 +29,76 @@ jobs:
         working-directory: backend
         run: uv run pytest -q
 
+  alembic-upgrade:
+    name: Alembic upgrade and seed
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: aiops
+          POSTGRES_PASSWORD: aiops
+          POSTGRES_DB: aiops
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aiops -d aiops"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://aiops:aiops@localhost:5432/aiops
+      REDIS_URL: redis://localhost:6379/0
+      WEBHOOK_API_KEY: changeme-webhook-api-key
+      DEFAULT_LLM_PROVIDER: mock
+      ADVANCED_LLM_PROVIDER: mock
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --extra dev
+
+      - name: Run Alembic upgrade
+        working-directory: backend
+        run: uv run alembic upgrade head
+
+      - name: Verify seed after migration
+        working-directory: backend
+        run: |
+          uv run python - <<'PY'
+          import asyncio
+          from sqlalchemy import func, select
+
+          from app.db.init_db import seed_mock_data
+          from app.db.session import async_session_factory
+          from app.models.ai_analysis import AIAnalysis
+          from app.models.alert import Alert
+
+          async def main() -> None:
+              await seed_mock_data()
+              await seed_mock_data()
+              async with async_session_factory() as session:
+                  alert_count = await session.scalar(select(func.count(Alert.id)))
+                  analysis_count = await session.scalar(select(func.count(AIAnalysis.id)))
+                  analysis_alert_ids = set((await session.execute(select(AIAnalysis.alert_id))).scalars().all())
+                  alert_ids = set((await session.execute(select(Alert.id))).scalars().all())
+              assert alert_count == 3
+              assert analysis_count == 3
+              assert analysis_alert_ids == alert_ids
+
+          asyncio.run(main())
+          PY
+
   frontend-build:
     name: Frontend build
     runs-on: ubuntu-latest
